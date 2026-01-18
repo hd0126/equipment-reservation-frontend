@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://equipment-reservation-backend-production.up.railway.app/api';
 
 // Token management
 const setToken = (token) => {
