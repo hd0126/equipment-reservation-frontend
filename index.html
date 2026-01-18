@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>장비 예약 시스템</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-gear-fill text-primary"></i> 장비 예약 시스템
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="index.html">
+              <i class="bi bi-house"></i> 홈
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="calendar.html">
+              <i class="bi bi-calendar"></i> 캘린더
+            </a>
+          </li>
+          <li class="nav-item" id="adminLink" style="display: none;">
+            <a class="nav-link" href="admin.html">
+              <i class="bi bi-shield-check"></i> 관리자
+            </a>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center" id="userInfo" style="display: none;"></div>
+        <div id="loginLink">
+          <a href="login.html" class="btn btn-primary">
+            <i class="bi bi-box-arrow-in-right"></i> 로그인
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container main-container">
+    <!-- Hero Section -->
+    <div class="card mb-4">
+      <div class="card-body text-center py-5">
+        <h1 class="display-4 mb-3">장비 예약 시스템</h1>
+        <p class="lead text-muted">필요한 장비를 빠르고 쉽게 예약하세요</p>
+      </div>
+    </div>
+
+    <!-- My Reservations Section (for logged in users) -->
+    <div id="myReservationsSection" style="display: none;">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="bi bi-calendar-check"></i> 내 예약</h5>
+          <a href="calendar.html" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-calendar"></i> 전체 캘린더 보기
+          </a>
+        </div>
+        <div class="card-body">
+          <div id="myReservationsContent">
+            <div class="spinner-container">
+              <div class="spinner-border text-primary"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Equipment List -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-grid"></i> 사용 가능한 장비</h5>
+        <div>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadEquipment()">
+            <i class="bi bi-arrow-clockwise"></i> 새로고침
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="equipmentList" class="row">
+          <div class="spinner-container">
+            <div class="spinner-border text-primary"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equipment Details Modal -->
+  <div class="modal fade" id="equipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="equipmentModalLabel">장비 상세정보</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="equipmentDetailsBody">
+          <!-- Dynamic content -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reservation Modal -->
+  <div class="modal fade" id="reservationModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="reservationModalLabel">장비 예약하기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="conflictWarning" class="alert alert-warning" style="display: none;">
+            <i class="bi bi-exclamation-triangle"></i> 선택한 시간에 이미 예약이 있습니다.
+          </div>
+          <form id="reservationForm">
+            <input type="hidden" id="reservationEquipmentId">
+            
+            <div class="mb-3">
+              <label for="reservationStart" class="form-label">시작 시간</label>
+              <input type="datetime-local" class="form-control" id="reservationStart" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="reservationEnd" class="form-label">종료 시간</label>
+              <input type="datetime-local" class="form-control" id="reservationEnd" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="reservationPurpose" class="form-label">사용 목적</label>
+              <textarea class="form-control" id="reservationPurpose" rows="3" placeholder="선택사항"></textarea>
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 예약하기
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Auth JS -->
+  <script src="js/auth.js"></script>
+  <!-- App JS -->
+  <script src="js/app.js"></script>
+
+  <script>
+    // Load equipment on page load
+    const loadEquipment = async () => {
+      const container = document.getElementById('equipmentList');
+      showLoading(container);
+      
+      try {
+        const equipment = await getEquipment();
+        
+        if (equipment.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <h4>등록된 장비가 없습니다</h4>
+              <p>관리자가 장비를 추가할 때까지 기다려주세요.</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = equipment.map(renderEquipmentCard).join('');
+        }
+      } catch (error) {
+        showError(container, '장비 목록을 불러오는데 실패했습니다: ' + error.message);
+      }
+    };
+
+    // Load user reservations
+    const loadMyReservations = async () => {
+      if (!isAuthenticated()) {
+        document.getElementById('myReservationsSection').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('myReservationsSection').style.display = 'block';
+      const container = document.getElementById('myReservationsContent');
+      
+      try {
+        const reservations = await getMyReservations();
+        
+        // Filter upcoming and active reservations
+        const now = new Date();
+        const activeReservations = reservations.filter(r => 
+          new Date(r.end_time) >= now && r.status !== 'cancelled'
+        ).slice(0, 5);
+        
+        if (activeReservations.length === 0) {
+          container.innerHTML = `
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-calendar-x"></i>
+              <p class="mb-0">예정된 예약이 없습니다</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>장비</th>
+                    <th>시작</th>
+                    <th>종료</th>
+                    <th>목적</th>
+                    <th>상태</th>
+                    <th>작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${activeReservations.map(r => renderReservationRow(r)).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+      } catch (error) {
+        showError(container, '예약 정보를 불러오는데 실패했습니다: ' + error.message);
+      }
+    };
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', () => {
+      loadEquipment();
+      loadMyReservations();
+    });
+  </script>
+</body>
+</html>

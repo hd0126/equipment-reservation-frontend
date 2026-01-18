@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - 장비 예약 시스템</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="card">
+        <div class="auth-header">
+          <h2><i class="bi bi-gear-fill text-primary"></i> 장비 예약 시스템</h2>
+          <p class="text-muted">계정에 로그인하세요</p>
+        </div>
+        <div class="auth-body">
+          <div id="alertContainer"></div>
+          
+          <form id="loginForm">
+            <div class="mb-3">
+              <label for="email" class="form-label">이메일</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control" id="email" placeholder="email@example.com" required>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="password" class="form-label">비밀번호</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control" id="password" placeholder="비밀번호" required>
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2 mb-3">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i> 로그인
+              </button>
+            </div>
+          </form>
+          
+          <div class="text-center">
+            <p class="mb-0">계정이 없으신가요? <a href="register.html">회원가입</a></p>
+          </div>
+
+          <hr class="my-4">
+          
+          <div class="text-center">
+            <p class="text-muted small mb-2">테스트 계정</p>
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-secondary btn-sm" onclick="quickLogin('admin')">
+                <i class="bi bi-shield-check"></i> 관리자로 로그인
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="quickLogin('user')">
+                <i class="bi bi-person"></i> 일반 사용자로 로그인
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Auth JS -->
+  <script src="js/auth.js"></script>
+  
+  <script>
+    // Redirect if already logged in
+    if (isAuthenticated()) {
+      window.location.href = 'index.html';
+    }
+
+    // Login form handler
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const alertContainer = document.getElementById('alertContainer');
+      
+      try {
+        alertContainer.innerHTML = `
+          <div class="alert alert-info">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            로그인 중...
+          </div>
+        `;
+        
+        const user = await login(email, password);
+        
+        alertContainer.innerHTML = `
+          <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i> 로그인 성공! 이동 중...
+          </div>
+        `;
+        
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
+        
+      } catch (error) {
+        alertContainer.innerHTML = `
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> ${error.message}
+          </div>
+        `;
+      }
+    });
+
+    // Quick login for testing
+    async function quickLogin(type) {
+      const credentials = {
+        admin: { email: 'admin@test.com', password: 'admin123' },
+        user: { email: 'user@test.com', password: 'user123' }
+      };
+
+      const cred = credentials[type];
+      document.getElementById('email').value = cred.email;
+      document.getElementById('password').value = cred.password;
+      
+      document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+    }
+  </script>
+</body>
+</html>
