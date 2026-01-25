@@ -41,6 +41,11 @@ const apiRequest = async (endpoint, options = {}) => {
     ...options.headers,
   };
 
+  // If body is FormData, remove Content-Type header to let browser set it with boundary
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
