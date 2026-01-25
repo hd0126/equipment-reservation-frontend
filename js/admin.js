@@ -172,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create FormData or JSON payload
       const formData = new FormData();
+      const equipmentId = document.getElementById('equipmentId').value; // Explicitly get value
       const name = document.getElementById('equipmentName').value;
       const description = document.getElementById('equipmentDescription').value;
       const location = document.getElementById('equipmentLocation').value;
