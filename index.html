@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>장비 예약 시스템</title>
-  
+
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
@@ -12,6 +13,7 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -90,6 +92,17 @@
         </div>
       </div>
       <div class="card-body">
+        <!-- Location Tabs -->
+        <ul class="nav nav-tabs mb-3" id="locationTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-location="all" type="button">
+              전체
+            </button>
+          </li>
+          <!-- Dynamic tabs will be added here -->
+        </ul>
+
+        <!-- Equipment Grid -->
         <div id="equipmentList" class="row">
           <div class="spinner-container">
             <div class="spinner-border text-primary"></div>
@@ -114,38 +127,71 @@
     </div>
   </div>
 
-  <!-- Reservation Modal -->
+  <!-- Reservation Modal (Improved) -->
   <div class="modal fade" id="reservationModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="reservationModalLabel">장비 예약하기</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <div id="conflictWarning" class="alert alert-warning" style="display: none;">
-            <i class="bi bi-exclamation-triangle"></i> 선택한 시간에 이미 예약이 있습니다.
+          <div id="conflictWarning" class="alert alert-danger" style="display: none;">
+            <i class="bi bi-exclamation-triangle"></i> 선택한 시간에 이미 예약이 있습니다. 다른 시간을 선택해주세요.
           </div>
+
+          <!-- Upcoming Reservations Preview -->
+          <div class="mb-4">
+            <h6><i class="bi bi-calendar3"></i> 예약 현황 (D-day ~ D+2)</h6>
+            <div id="reservationPreview" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+              <small class="text-muted">로딩 중...</small>
+            </div>
+          </div>
+
           <form id="reservationForm">
             <input type="hidden" id="reservationEquipmentId">
-            
-            <div class="mb-3">
-              <label for="reservationStart" class="form-label">시작 시간</label>
-              <input type="datetime-local" class="form-control" id="reservationStart" required>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="reservationDate" class="form-label">예약 날짜</label>
+                <input type="date" class="form-control" id="reservationDate" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="reservationStartTime" class="form-label">시작 시간</label>
+                <select class="form-select" id="reservationStartTime" required>
+                  <!-- 30-min intervals from 08:00 to 22:00 -->
+                </select>
+              </div>
             </div>
-            
+
             <div class="mb-3">
-              <label for="reservationEnd" class="form-label">종료 시간</label>
-              <input type="datetime-local" class="form-control" id="reservationEnd" required>
+              <label for="reservationDuration" class="form-label">사용 시간</label>
+              <select class="form-select" id="reservationDuration" required>
+                <option value="30">30분</option>
+                <option value="60" selected>1시간</option>
+                <option value="90">1시간 30분</option>
+                <option value="120">2시간</option>
+                <option value="150">2시간 30분</option>
+                <option value="180">3시간</option>
+                <option value="240">4시간</option>
+                <option value="300">5시간</option>
+                <option value="360">6시간</option>
+                <option value="480">8시간</option>
+              </select>
             </div>
-            
+
+            <div class="mb-3">
+              <label class="form-label">예약 시간 (자동 계산)</label>
+              <div id="calculatedTime" class="form-control bg-light">--:-- ~ --:--</div>
+            </div>
+
             <div class="mb-3">
               <label for="reservationPurpose" class="form-label">사용 목적</label>
-              <textarea class="form-control" id="reservationPurpose" rows="3" placeholder="선택사항"></textarea>
+              <textarea class="form-control" id="reservationPurpose" rows="2" placeholder="선택사항"></textarea>
             </div>
-            
+
             <div class="d-grid">
-              <button type="submit" class="btn btn-primary">
+              <button type="submit" class="btn btn-primary btn-lg">
                 <i class="bi bi-check-circle"></i> 예약하기
               </button>
             </div>
@@ -163,27 +209,151 @@
   <script src="js/app.js"></script>
 
   <script>
-    // Load equipment on page load
+    let allEquipment = [];
+    let currentFilter = 'all';
+
+    // Generate time options (30-min intervals)
+    const generateTimeOptions = () => {
+      const select = document.getElementById('reservationStartTime');
+      select.innerHTML = '';
+      for (let h = 8; h <= 21; h++) {
+        for (let m = 0; m < 60; m += 30) {
+          const hour = h.toString().padStart(2, '0');
+          const min = m.toString().padStart(2, '0');
+          const option = document.createElement('option');
+          option.value = `${hour}:${min}`;
+          option.textContent = `${hour}:${min}`;
+          select.appendChild(option);
+        }
+      }
+    };
+
+    // Calculate and display end time
+    const updateCalculatedTime = () => {
+      const date = document.getElementById('reservationDate').value;
+      const startTime = document.getElementById('reservationStartTime').value;
+      const duration = parseInt(document.getElementById('reservationDuration').value);
+
+      if (date && startTime) {
+        const start = new Date(`${date}T${startTime}`);
+        const end = new Date(start.getTime() + duration * 60000);
+        const endTime = end.toTimeString().slice(0, 5);
+        document.getElementById('calculatedTime').textContent =
+          `${startTime} ~ ${endTime} (${duration}분)`;
+      }
+    };
+
+    // Load reservation preview (D-day to D+2)
+    const loadReservationPreview = async (equipmentId) => {
+      const preview = document.getElementById('reservationPreview');
+      preview.innerHTML = '<small class="text-muted">로딩 중...</small>';
+
+      try {
+        const today = new Date();
+        const dates = [];
+        for (let i = 0; i < 3; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() + i);
+          dates.push(d.toISOString().split('T')[0]);
+        }
+
+        const reservations = await getEquipmentReservations(equipmentId);
+        const filtered = reservations.filter(r => {
+          const rDate = r.start_time.split('T')[0];
+          return dates.includes(rDate) && r.status === 'confirmed';
+        });
+
+        if (filtered.length === 0) {
+          preview.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> 3일간 예약이 없습니다.</small>';
+        } else {
+          const dateLabels = ['D-day (오늘)', 'D+1 (내일)', 'D+2 (모레)'];
+          let html = '';
+          dates.forEach((date, idx) => {
+            const dayReservations = filtered.filter(r => r.start_time.split('T')[0] === date);
+            html += `<div class="mb-2"><strong>${dateLabels[idx]} (${date})</strong>`;
+            if (dayReservations.length === 0) {
+              html += '<span class="text-success ms-2">예약 없음</span>';
+            } else {
+              html += '<ul class="list-unstyled ms-3 mb-0">';
+              dayReservations.forEach(r => {
+                const start = new Date(r.start_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                const end = new Date(r.end_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                html += `<li class="text-danger"><small>${start} ~ ${end} (${r.username})</small></li>`;
+              });
+              html += '</ul>';
+            }
+            html += '</div>';
+          });
+          preview.innerHTML = html;
+        }
+      } catch (error) {
+        preview.innerHTML = '<small class="text-danger">예약 현황을 불러올 수 없습니다.</small>';
+      }
+    };
+
+    // Load equipment with location tabs
     const loadEquipment = async () => {
       const container = document.getElementById('equipmentList');
       showLoading(container);
-      
+
       try {
-        const equipment = await getEquipment();
-        
-        if (equipment.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <i class="bi bi-inbox"></i>
-              <h4>등록된 장비가 없습니다</h4>
-              <p>관리자가 장비를 추가할 때까지 기다려주세요.</p>
-            </div>
+        allEquipment = await getEquipment();
+
+        // Extract unique locations
+        const locations = [...new Set(allEquipment.map(e => e.location).filter(Boolean))];
+
+        // Update tabs
+        const tabsContainer = document.getElementById('locationTabs');
+        tabsContainer.innerHTML = `
+          <li class="nav-item" role="presentation">
+            <button class="nav-link ${currentFilter === 'all' ? 'active' : ''}" data-location="all" type="button">
+              전체 <span class="badge bg-secondary">${allEquipment.length}</span>
+            </button>
+          </li>
+        `;
+        locations.forEach(loc => {
+          const count = allEquipment.filter(e => e.location === loc).length;
+          tabsContainer.innerHTML += `
+            <li class="nav-item" role="presentation">
+              <button class="nav-link ${currentFilter === loc ? 'active' : ''}" data-location="${loc}" type="button">
+                ${loc} <span class="badge bg-secondary">${count}</span>
+              </button>
+            </li>
           `;
-        } else {
-          container.innerHTML = equipment.map(renderEquipmentCard).join('');
-        }
+        });
+
+        // Add tab click handlers
+        tabsContainer.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            currentFilter = btn.dataset.location;
+            tabsContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderEquipment();
+          });
+        });
+
+        renderEquipment();
       } catch (error) {
         showError(container, '장비 목록을 불러오는데 실패했습니다: ' + error.message);
+      }
+    };
+
+    // Render filtered equipment
+    const renderEquipment = () => {
+      const container = document.getElementById('equipmentList');
+      const filtered = currentFilter === 'all'
+        ? allEquipment
+        : allEquipment.filter(e => e.location === currentFilter);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h4>해당 위치에 장비가 없습니다</h4>
+          </div>
+        `;
+      } else {
+        container.innerHTML = filtered.map(renderEquipmentCard).join('');
       }
     };
 
@@ -196,16 +366,15 @@
 
       document.getElementById('myReservationsSection').style.display = 'block';
       const container = document.getElementById('myReservationsContent');
-      
+
       try {
         const reservations = await getMyReservations();
-        
-        // Filter upcoming and active reservations
+
         const now = new Date();
-        const activeReservations = reservations.filter(r => 
+        const activeReservations = reservations.filter(r =>
           new Date(r.end_time) >= now && r.status !== 'cancelled'
         ).slice(0, 5);
-        
+
         if (activeReservations.length === 0) {
           container.innerHTML = `
             <div class="text-center text-muted py-3">
@@ -239,6 +408,90 @@
       }
     };
 
+    // Override openReservationModal
+    window.openReservationModal = (equipmentId) => {
+      currentEquipmentId = equipmentId;
+
+      // Close equipment modal if open
+      const equipmentModal = bootstrap.Modal.getInstance(document.getElementById('equipmentModal'));
+      if (equipmentModal) equipmentModal.hide();
+
+      // Reset form
+      document.getElementById('reservationForm').reset();
+      document.getElementById('reservationEquipmentId').value = equipmentId;
+      document.getElementById('conflictWarning').style.display = 'none';
+
+      // Set default date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('reservationDate').value = today;
+      document.getElementById('reservationDate').min = today;
+
+      // Generate time options
+      generateTimeOptions();
+      updateCalculatedTime();
+
+      // Load equipment name
+      getEquipmentById(equipmentId).then(eq => {
+        document.getElementById('reservationModalLabel').textContent = `${eq.name} 예약하기`;
+      });
+
+      // Load reservation preview
+      loadReservationPreview(equipmentId);
+
+      const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
+      modal.show();
+    };
+
+    // Handle reservation form with new format
+    document.getElementById('reservationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const equipmentId = document.getElementById('reservationEquipmentId').value;
+      const date = document.getElementById('reservationDate').value;
+      const startTime = document.getElementById('reservationStartTime').value;
+      const duration = parseInt(document.getElementById('reservationDuration').value);
+      const purpose = document.getElementById('reservationPurpose').value;
+
+      const startDateTime = new Date(`${date}T${startTime}`);
+      const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+
+      try {
+        // Check for conflicts
+        const conflictCheck = await checkReservationConflict(
+          equipmentId,
+          startDateTime.toISOString(),
+          endDateTime.toISOString()
+        );
+
+        if (conflictCheck.hasConflict) {
+          document.getElementById('conflictWarning').style.display = 'block';
+          return;
+        }
+
+        // Create reservation
+        await createReservation({
+          equipment_id: equipmentId,
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          purpose: purpose
+        });
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('reservationModal'));
+        modal.hide();
+
+        alert('예약이 완료되었습니다!');
+        window.location.reload();
+
+      } catch (error) {
+        alert('예약 생성 실패: ' + error.message);
+      }
+    });
+
+    // Event listeners for time calculation
+    document.getElementById('reservationDate')?.addEventListener('change', updateCalculatedTime);
+    document.getElementById('reservationStartTime')?.addEventListener('change', updateCalculatedTime);
+    document.getElementById('reservationDuration')?.addEventListener('change', updateCalculatedTime);
+
     // Initialize page
     document.addEventListener('DOMContentLoaded', () => {
       loadEquipment();
@@ -246,4 +499,5 @@
     });
   </script>
 </body>
+
 </html>

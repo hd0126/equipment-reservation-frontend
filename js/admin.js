@@ -29,6 +29,53 @@ const loadDashboardStats = async () => {
   }
 };
 
+// Load detailed statistics
+const loadStatistics = async () => {
+  try {
+    const stats = await apiRequest('/stats');
+
+    // Render equipment stats (with hours)
+    const equipmentTable = document.getElementById('equipmentStatsTable');
+    if (equipmentTable) {
+      if (stats.equipmentStats && stats.equipmentStats.length > 0) {
+        equipmentTable.innerHTML = stats.equipmentStats.map(eq => {
+          const hours = parseFloat(eq.total_hours || 0).toFixed(1);
+          return `
+          <tr>
+            <td>${eq.equipment_name}</td>
+            <td class="text-center"><span class="badge bg-primary">${eq.total_reservations || 0}</span></td>
+            <td class="text-center"><span class="badge bg-success">${eq.confirmed_count || 0}</span></td>
+            <td class="text-center"><span class="badge bg-info">${hours}h</span></td>
+          </tr>
+        `}).join('');
+      } else {
+        equipmentTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">예약 데이터 없음</td></tr>';
+      }
+    }
+
+    // Render user stats (with hours)
+    const userTable = document.getElementById('userStatsTable');
+    if (userTable) {
+      if (stats.userStats && stats.userStats.length > 0) {
+        userTable.innerHTML = stats.userStats.map(user => {
+          const hours = parseFloat(user.total_hours || 0).toFixed(1);
+          return `
+          <tr>
+            <td>${user.username} <small class="text-muted">(${user.email})</small></td>
+            <td class="text-center"><span class="badge bg-primary">${user.total_reservations || 0}</span></td>
+            <td class="text-center"><span class="badge bg-success">${user.confirmed_count || 0}</span></td>
+            <td class="text-center"><span class="badge bg-info">${hours}h</span></td>
+          </tr>
+        `}).join('');
+      } else {
+        userTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">예약 데이터 없음</td></tr>';
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load statistics:', error);
+  }
+};
+
 // Load equipment management
 const loadEquipmentManagement = async () => {
   const container = document.getElementById('equipmentManagementTable');
@@ -110,12 +157,16 @@ const loadReservationManagement = async () => {
             <td><small>${formatDate(r.end_time)}</small></td>
             <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
             <td>
-              ${r.status !== 'cancelled' ? `
-                <button class="btn btn-sm btn-outline-danger" onclick="handleAdminCancelReservation(${r.id})">
+              ${r.status === 'cancelled' ? `
+                <button class="btn btn-sm btn-outline-success" onclick="handleRestoreReservation(${r.id})" title="복구">
+                  <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+              ` : `
+                <button class="btn btn-sm btn-outline-danger" onclick="handleAdminCancelReservation(${r.id})" title="취소">
                   <i class="bi bi-x-circle"></i>
                 </button>
-              ` : ''}
-              <button class="btn btn-sm btn-outline-danger" onclick="handleAdminDeleteReservation(${r.id})">
+              `}
+              <button class="btn btn-sm btn-outline-danger" onclick="handleAdminDeleteReservation(${r.id})" title="삭제">
                 <i class="bi bi-trash"></i>
               </button>
             </td>
@@ -272,6 +323,23 @@ const handleAdminDeleteReservation = async (id) => {
   }
 };
 
+// Restore cancelled reservation (admin)
+const handleRestoreReservation = async (id) => {
+  if (!confirm('이 예약을 복구하시겠습니까?')) {
+    return;
+  }
+
+  try {
+    await apiRequest(`/reservations/${id}/restore`, { method: 'PATCH' });
+    alert('예약이 복구되었습니다.');
+    loadReservationManagement();
+    loadDashboardStats();
+    loadStatistics();
+  } catch (error) {
+    alert('예약 복구 실패: ' + error.message);
+  }
+};
+
 // Initialize admin page
 document.addEventListener('DOMContentLoaded', () => {
   // Check admin access
@@ -281,4 +349,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboardStats();
   loadEquipmentManagement();
   loadReservationManagement();
+  loadStatistics(); // Add statistics loading
 });
