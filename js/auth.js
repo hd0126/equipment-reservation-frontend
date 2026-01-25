@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = 'https://equipment-reservation-backend-production.up.railway.app/api';
+const API_BASE_URL = 'https://equipment-reservation-backend.vercel.app/api';
 
 // Token management
 const setToken = (token) => {
@@ -148,7 +148,7 @@ const updateAuthUI = () => {
     `;
     userInfo.style.display = 'flex';
     if (loginLink) loginLink.style.display = 'none';
-    
+
     // Show admin link if user is admin
     if (adminLink && user.role === 'admin') {
       adminLink.style.display = 'block';
