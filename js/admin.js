@@ -29,10 +29,18 @@ const loadDashboardStats = async () => {
   }
 };
 
-// Load detailed statistics
-const loadStatistics = async () => {
+// Cached stats data for Excel export
+let lastStatsData = null;
+
+// Load detailed statistics with optional date range
+const loadStatistics = async (startDate, endDate) => {
   try {
-    const stats = await apiRequest('/stats');
+    let url = '/stats';
+    if (startDate && endDate) {
+      url += `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    }
+    const stats = await apiRequest(url);
+    lastStatsData = stats;
 
     // Render equipment stats (with hours)
     const equipmentTable = document.getElementById('equipmentStatsTable');
@@ -344,6 +352,104 @@ window.handleRestoreReservation = async (id) => {
   }
 };
 
+// Period selection helpers
+window.setStatsPeriod = (period) => {
+  const startInput = document.getElementById('statsStartDate');
+  const endInput = document.getElementById('statsEndDate');
+  if (!startInput || !endInput) return;
+
+  const now = new Date();
+  let start, end;
+
+  switch (period) {
+    case 'thisMonth':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      break;
+    case 'lastMonth':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'last3Months':
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      break;
+    case 'thisYear':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear() + 1, 0, 1);
+      break;
+    case 'all':
+      startInput.value = '';
+      endInput.value = '';
+      return;
+  }
+
+  startInput.value = start.toISOString().split('T')[0];
+  endInput.value = end.toISOString().split('T')[0];
+};
+
+window.applyStatsPeriod = () => {
+  const startDate = document.getElementById('statsStartDate')?.value || null;
+  const endDate = document.getElementById('statsEndDate')?.value || null;
+  loadStatistics(startDate, endDate);
+};
+
+// Excel export
+window.exportStatsToExcel = () => {
+  if (!lastStatsData) {
+    alert('먼저 통계를 조회해주세요.');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    alert('엑셀 라이브러리가 로드되지 않았습니다.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Equipment stats sheet
+  if (lastStatsData.equipmentStats && lastStatsData.equipmentStats.length > 0) {
+    const eqData = lastStatsData.equipmentStats.map(eq => ({
+      '장비명': eq.equipment_name,
+      '총 예약': Number(eq.total_reservations || 0),
+      '확정': Number(eq.confirmed_count || 0),
+      '취소': Number(eq.cancelled_count || 0),
+      '총 시간(h)': parseFloat(parseFloat(eq.total_hours || 0).toFixed(1))
+    }));
+    const eqSheet = XLSX.utils.json_to_sheet(eqData);
+    XLSX.utils.book_append_sheet(wb, eqSheet, '장비별 통계');
+  }
+
+  // User stats sheet
+  if (lastStatsData.userStats && lastStatsData.userStats.length > 0) {
+    const userData = lastStatsData.userStats.map(user => ({
+      '사용자': user.username,
+      '이메일': user.email,
+      '총 예약': Number(user.total_reservations || 0),
+      '확정': Number(user.confirmed_count || 0),
+      '취소': Number(user.cancelled_count || 0),
+      '총 시간(h)': parseFloat(parseFloat(user.total_hours || 0).toFixed(1))
+    }));
+    const userSheet = XLSX.utils.json_to_sheet(userData);
+    XLSX.utils.book_append_sheet(wb, userSheet, '사용자별 통계');
+  }
+
+  // Generate filename with date
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const startDate = document.getElementById('statsStartDate')?.value;
+  const endDate = document.getElementById('statsEndDate')?.value;
+  let fileName;
+  if (startDate && endDate) {
+    fileName = `장비예약통계_${startDate}_${endDate}.xlsx`;
+  } else {
+    fileName = `장비예약통계_${dateStr}.xlsx`;
+  }
+
+  XLSX.writeFile(wb, fileName);
+};
+
 // Initialize admin page
 document.addEventListener('DOMContentLoaded', () => {
   // Check admin access
@@ -353,5 +459,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboardStats();
   loadEquipmentManagement();
   loadReservationManagement();
-  loadStatistics(); // Add statistics loading
+  loadStatistics();
 });
