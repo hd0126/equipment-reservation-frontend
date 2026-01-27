@@ -602,12 +602,11 @@ window.openReservationModal = async (equipmentId) => {
 
   currentEquipmentId = equipmentId;
 
-  // Close equipment modal if open
+  // Close equipment modal if open and currently shown
   const eqModalEl = document.getElementById('equipmentModal');
   const eqModalInst = bootstrap.Modal.getInstance(eqModalEl);
-  if (eqModalInst) {
+  if (eqModalInst && eqModalEl.classList.contains('show')) {
     eqModalInst.hide();
-    // Wait for modal hide animation to complete
     await new Promise(resolve => {
       eqModalEl.addEventListener('hidden.bs.modal', resolve, { once: true });
     });
