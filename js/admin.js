@@ -73,6 +73,10 @@ const loadStatistics = async () => {
     }
   } catch (error) {
     console.error('Failed to load statistics:', error);
+    const eqTable = document.getElementById('equipmentStatsTable');
+    if (eqTable) eqTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
+    const uTable = document.getElementById('userStatsTable');
+    if (uTable) uTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
   }
 };
 
@@ -194,7 +198,7 @@ const openAddEquipmentModal = () => {
 };
 
 // Edit equipment
-const editEquipment = async (id) => {
+window.editEquipment = async (id) => {
   try {
     const equipment = await getEquipmentById(id);
 
@@ -276,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Delete equipment
-const handleDeleteEquipment = async (id) => {
+window.handleDeleteEquipment = async (id) => {
   if (!confirm('이 장비를 삭제하시겠습니까? 관련된 모든 예약도 삭제됩니다.')) {
     return;
   }
@@ -292,7 +296,7 @@ const handleDeleteEquipment = async (id) => {
 };
 
 // Cancel reservation (admin)
-const handleAdminCancelReservation = async (id) => {
+window.handleAdminCancelReservation = async (id) => {
   if (!confirm('이 예약을 취소하시겠습니까?')) {
     return;
   }
@@ -308,7 +312,7 @@ const handleAdminCancelReservation = async (id) => {
 };
 
 // Delete reservation (admin)
-const handleAdminDeleteReservation = async (id) => {
+window.handleAdminDeleteReservation = async (id) => {
   if (!confirm('이 예약을 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
     return;
   }
@@ -324,7 +328,7 @@ const handleAdminDeleteReservation = async (id) => {
 };
 
 // Restore cancelled reservation (admin)
-const handleRestoreReservation = async (id) => {
+window.handleRestoreReservation = async (id) => {
   if (!confirm('이 예약을 복구하시겠습니까?')) {
     return;
   }
