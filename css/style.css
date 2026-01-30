@@ -109,13 +109,15 @@ body {
   margin-bottom: 0.5rem;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
   border-radius: var(--border-radius);
   border: 1px solid #dee2e6;
   padding: 0.625rem 0.875rem;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
 }
@@ -291,4 +293,111 @@ body {
 
 .empty-state h4 {
   margin-bottom: 0.5rem;
+}
+
+/* Reservation Grid Styles (2-Row Compact) */
+.reservation-grid-container {
+  overflow-x: hidden;
+  /* Prevent horizontal scroll */
+  margin-bottom: 1.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: var(--border-radius);
+  background-color: #fff;
+}
+
+.reservation-grid {
+  display: grid;
+  /* 1 (Date Label) + 14 (Hours 08 to 21) */
+  grid-template-columns: 80px repeat(14, 1fr);
+  width: 100%;
+}
+
+.grid-header-cell {
+  background-color: var(--light-color);
+  padding: 0.25rem;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  font-size: 0.7rem;
+}
+
+.grid-date-column {
+  background-color: #f1f3f5;
+  padding: 0.25rem;
+  font-weight: 600;
+  border-right: 2px solid #dee2e6;
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  grid-row: span 2;
+  /* Spans across :00 and :30 rows */
+}
+
+.grid-slot {
+  height: 40px;
+  /* More compact height */
+  border-bottom: 1px solid #f1f3f5;
+  border-right: 1px solid #f1f3f5;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.1s;
+  user-select: none;
+}
+
+/* Bottom row (:30 slots) should have thicker bottom border for date separation */
+.grid-slot-row-30 {
+  border-bottom: 2px solid #dee2e6;
+}
+
+.grid-slot:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+.grid-slot.reserved {
+  background-color: #fde8e8;
+  cursor: not-allowed;
+  font-size: 0.65rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #c81e1e;
+  overflow: hidden;
+  padding: 2px;
+  border-right: 1px solid #fbd5d5;
+}
+
+.grid-slot.selecting {
+  background-color: rgba(13, 110, 253, 0.3) !important;
+  border: 1px solid var(--primary-color);
+}
+
+.grid-slot.selected-start {
+  background-color: rgba(13, 110, 253, 0.5) !important;
+}
+
+.grid-slot.selected-end {
+  background-color: rgba(13, 110, 253, 0.5) !important;
+}
+
+.grid-date-label {
+  font-size: 0.8rem;
+}
+
+.grid-day-label {
+  font-size: 0.7rem;
+  color: var(--secondary-color);
+}
+
+/* Time indication icon/text in slot? Keep it simple for now */
+.grid-slot::after {
+  content: attr(data-label);
+  position: absolute;
+  font-size: 0.55rem;
+  color: #adb5bd;
+  right: 2px;
+  bottom: 1px;
+  pointer-events: none;
 }
