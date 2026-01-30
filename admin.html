@@ -143,9 +143,14 @@
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-person-check"></i> 권한 관리 현황</h5>
-        <button class="btn btn-success btn-sm" onclick="exportPermissions()">
-          <i class="bi bi-file-earmark-spreadsheet"></i> 권한 내보내기
-        </button>
+        <div>
+          <button class="btn btn-outline-secondary btn-sm me-2" onclick="loadUserPermissionSummary()">
+            <i class="bi bi-arrow-clockwise"></i> 새로고침
+          </button>
+          <button class="btn btn-success btn-sm" onclick="exportPermissions()">
+            <i class="bi bi-file-earmark-spreadsheet"></i> 권한 내보내기
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <div class="row">
@@ -314,7 +319,7 @@
 
   <!-- Equipment Modal -->
   <div class="modal fade" id="equipmentModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="equipmentModalLabel">장비 추가/수정</h5>
@@ -324,59 +329,67 @@
           <form id="equipmentForm">
             <input type="hidden" id="equipmentId">
 
-            <div class="mb-3">
-              <label for="equipmentName" class="form-label">장비명 *</label>
-              <input type="text" class="form-control" id="equipmentName" required>
-            </div>
+            <div class="row">
+              <!-- Left Column -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="equipmentName" class="form-label">장비명 *</label>
+                  <input type="text" class="form-control" id="equipmentName" required>
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentDescription" class="form-label">설명</label>
-              <textarea class="form-control" id="equipmentDescription" rows="3"></textarea>
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentLocation" class="form-label">위치</label>
+                  <input type="text" class="form-control" id="equipmentLocation">
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentLocation" class="form-label">위치</label>
-              <input type="text" class="form-control" id="equipmentLocation">
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentStatus" class="form-label">상태</label>
+                  <select class="form-select" id="equipmentStatus">
+                    <option value="available">사용 가능</option>
+                    <option value="maintenance">점검 중</option>
+                  </select>
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentStatus" class="form-label">상태</label>
-              <select class="form-select" id="equipmentStatus">
-                <option value="available">사용 가능</option>
-                <option value="maintenance">점검 중</option>
-              </select>
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentDescription" class="form-label">설명</label>
+                  <textarea class="form-control" id="equipmentDescription" rows="3"></textarea>
+                </div>
+              </div>
 
-            <div class="mb-3">
-              <label for="equipmentImageUrl" class="form-label">이미지 URL</label>
-              <input type="url" class="form-control" id="equipmentImageUrl" placeholder="https://...">
-            </div>
+              <!-- Right Column -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="equipmentImageUrl" class="form-label">이미지 URL</label>
+                  <input type="url" class="form-control" id="equipmentImageUrl" placeholder="https://...">
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
-              <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
+                  <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
+                </div>
 
-            <!-- 문서 업로드 섹션 -->
-            <hr>
-            <h6 class="mb-3"><i class="bi bi-file-earmark-pdf"></i> 문서 파일</h6>
+                <!-- 문서 업로드 섹션 -->
+                <hr>
+                <h6 class="mb-3"><i class="bi bi-file-earmark-pdf"></i> 문서 파일</h6>
 
-            <div class="mb-3">
-              <label for="equipmentBrochure" class="form-label">장비 소개 자료 (PDF)</label>
-              <input type="file" class="form-control" id="equipmentBrochure" accept=".pdf">
-              <small class="text-muted" id="currentBrochure"></small>
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentBrochure" class="form-label">장비 소개 자료 (PDF)</label>
+                  <input type="file" class="form-control form-control-sm" id="equipmentBrochure" accept=".pdf">
+                  <small class="text-muted" id="currentBrochure"></small>
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentManual" class="form-label">매뉴얼 (PDF)</label>
-              <input type="file" class="form-control" id="equipmentManual" accept=".pdf">
-              <small class="text-muted" id="currentManual"></small>
-            </div>
+                <div class="mb-3">
+                  <label for="equipmentManual" class="form-label">매뉴얼 (PDF)</label>
+                  <input type="file" class="form-control form-control-sm" id="equipmentManual" accept=".pdf">
+                  <small class="text-muted" id="currentManual"></small>
+                </div>
 
-            <div class="mb-3">
-              <label for="equipmentQuickGuide" class="form-label">간단 매뉴얼 (PDF)</label>
-              <input type="file" class="form-control" id="equipmentQuickGuide" accept=".pdf">
-              <small class="text-muted" id="currentQuickGuide"></small>
+                <div class="mb-3">
+                  <label for="equipmentQuickGuide" class="form-label">간단 매뉴얼 (PDF)</label>
+                  <input type="file" class="form-control form-control-sm" id="equipmentQuickGuide" accept=".pdf">
+                  <small class="text-muted" id="currentQuickGuide"></small>
+                </div>
+              </div>
             </div>
 
             <div class="d-grid">
@@ -425,8 +438,9 @@
 
           <!-- Current Permissions -->
           <div class="card">
-            <div class="card-header py-2">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
               <h6 class="mb-0"><i class="bi bi-people"></i> 현재 사용 권한자</h6>
+              <span class="badge bg-primary" id="permissionCount">0명</span>
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">

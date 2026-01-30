@@ -682,8 +682,12 @@ const openPermissionModal = async (equipmentId, equipmentName) => {
 // Load current permissions for equipment
 const loadPermissions = async (equipmentId) => {
   const container = document.getElementById('permissionList');
+  const countBadge = document.getElementById('permissionCount');
   try {
     const permissions = await apiRequest(`/permissions/equipment/${equipmentId}`);
+
+    // Update count badge
+    if (countBadge) countBadge.textContent = `${permissions.length}명`;
 
     if (permissions.length === 0) {
       container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">권한자 없음</td></tr>';
@@ -704,6 +708,7 @@ const loadPermissions = async (equipmentId) => {
     }
   } catch (error) {
     container.innerHTML = `<tr><td colspan="5" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
+    if (countBadge) countBadge.textContent = '0명';
   }
 };
 
