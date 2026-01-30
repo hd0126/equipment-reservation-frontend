@@ -30,7 +30,19 @@ const isAuthenticated = () => {
 
 const isAdmin = () => {
   const user = getUser();
-  return user && user.role === 'admin';
+  return user && (user.role === 'admin' || user.user_role === 'admin');
+};
+
+// Check if user is equipment manager or admin
+const isManager = () => {
+  const user = getUser();
+  return user && ['equipment_manager', 'admin'].includes(user.user_role);
+};
+
+// Get user role (new system)
+const getUserRole = () => {
+  const user = getUser();
+  return user ? user.user_role : null;
 };
 
 // API request helper with authentication
@@ -85,12 +97,20 @@ const login = async (email, password) => {
   }
 };
 
-// Register function
-const register = async (username, email, password) => {
+// Register function with extended fields
+const register = async (username, email, password, department, phone, userRole, supervisor) => {
   try {
     const data = await apiRequest('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({
+        username,
+        email,
+        password,
+        department,
+        phone,
+        userRole,
+        supervisor
+      }),
     });
     return data;
   } catch (error) {
