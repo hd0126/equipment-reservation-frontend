@@ -266,8 +266,8 @@ const generateTimeOptions = () => {
       const hour = h.toString().padStart(2, '0');
       const min = m.toString().padStart(2, '0');
       const option = document.createElement('option');
-      option.value = `${hour}:${min} `;
-      option.textContent = `${hour}:${min} `;
+      option.value = `${hour}:${min}`;
+      option.textContent = `${hour}:${min}`;
       select.appendChild(option);
     }
   }
@@ -282,7 +282,7 @@ const updateCalculatedTime = () => {
 
   if (dateStr && startTime && durationField && calcDisplay) {
     const duration = parseInt(durationField.value);
-    const start = new Date(`${dateStr}T${startTime} `);
+    const start = new Date(`${dateStr}T${startTime.trim()}`);
     const end = new Date(start.getTime() + duration * 60000);
     const endTime = end.toTimeString().slice(0, 5);
     calcDisplay.textContent = `${startTime} ~${endTime} (${duration}분)`;
@@ -361,7 +361,7 @@ const renderReservationGrid = async (equipmentId) => {
 };
 
 const renderSlot = (date, time, slotIdx, confirmedReservations, isOddRow) => {
-  const slotStart = new Date(`${date}T${time} `);
+  const slotStart = new Date(`${date}T${time}`);
   const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
 
   const res = confirmedReservations.find(r => {
@@ -413,7 +413,7 @@ window.handleSlotMouseOver = (el) => {
   // Check for conflicts
   let hasConflict = false;
   for (let i = start; i <= end; i++) {
-    const target = document.querySelector(`.grid - slot[data - date="${dragStartDate}"][data - index="${i}"]`);
+    const target = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${i}"]`);
     if (!target || target.classList.contains('reserved')) {
       hasConflict = true;
       break;
@@ -423,7 +423,7 @@ window.handleSlotMouseOver = (el) => {
   if (!hasConflict) {
     clearSelectionStyles();
     for (let i = start; i <= end; i++) {
-      const target = document.querySelector(`.grid - slot[data - date="${dragStartDate}"][data - index="${i}"]`);
+      const target = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${i}"]`);
       if (target) {
         target.classList.add('selecting');
         if (i === start) target.classList.add('selected-start');
@@ -431,7 +431,7 @@ window.handleSlotMouseOver = (el) => {
       }
     }
 
-    const startSlot = document.querySelector(`.grid - slot[data - date="${dragStartDate}"][data - index="${start}"]`);
+    const startSlot = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${start}"]`);
     const startTime = startSlot.dataset.time;
     const duration = (end - start + 1) * 30;
     updateReservationForm(dragStartDate, startTime, duration);
@@ -479,10 +479,10 @@ const renderEquipmentList = () => {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-  < div class="empty-state" >
+      <div class="empty-state">
         <i class="bi bi-inbox"></i>
         <h4>해당 위치에 장비가 없습니다</h4>
-      </div >
+      </div>
   `;
   } else {
     container.innerHTML = filtered.map(renderEquipmentCard).join('');
@@ -505,20 +505,20 @@ const loadEquipment = async () => {
     const tabsContainer = document.getElementById('locationTabs');
     if (tabsContainer) {
       tabsContainer.innerHTML = `
-  < li class="nav-item" role = "presentation" >
-    <button class="nav-link ${currentFilter === 'all' ? 'active' : ''}" data-location="all" type="button">
-      전체 <span class="badge bg-secondary">${allEquipment.length}</span>
-    </button>
-        </li >
+        <li class="nav-item" role="presentation">
+          <button class="nav-link ${currentFilter === 'all' ? 'active' : ''}" data-location="all" type="button">
+            전체 <span class="badge bg-secondary">${allEquipment.length}</span>
+          </button>
+        </li>
   `;
       locations.forEach(loc => {
         const count = allEquipment.filter(e => e.location === loc).length;
         tabsContainer.innerHTML += `
-  < li class="nav-item" role = "presentation" >
-    <button class="nav-link ${currentFilter === loc ? 'active' : ''}" data-location="${loc}" type="button">
-      ${loc} <span class="badge bg-secondary">${count}</span>
-    </button>
-          </li >
+          <li class="nav-item" role="presentation">
+            <button class="nav-link ${currentFilter === loc ? 'active' : ''}" data-location="${loc}" type="button">
+              ${loc} <span class="badge bg-secondary">${count}</span>
+            </button>
+          </li>
   `;
       });
 
@@ -560,30 +560,30 @@ const loadMyReservations = async () => {
 
     if (activeReservations.length === 0) {
       container.innerHTML = `
-  < div class="text-center text-muted py-3" >
+        <div class="text-center text-muted py-3">
           <i class="bi bi-calendar-x"></i>
           <p class="mb-0">예정된 예약이 없습니다</p>
-        </div >
+        </div>
   `;
     } else {
       container.innerHTML = `
-  < div class="table-responsive" >
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th class="text-nowrap">장비</th>
-          <th class="text-nowrap">시간</th>
-          <th class="text-nowrap text-center">사용시간</th>
-          <th class="text-center">사용 목적</th>
-          <th class="text-nowrap text-center">상태</th>
-          <th class="text-nowrap text-center">작업</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${activeReservations.map(r => renderReservationRow(r)).join('')}
-      </tbody>
-    </table>
-        </div >
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th class="text-nowrap text-center">장비</th>
+                <th class="text-nowrap text-center">시간</th>
+                <th class="text-nowrap text-center">사용시간</th>
+                <th class="text-center">사용 목적</th>
+                <th class="text-nowrap text-center">상태</th>
+                <th class="text-nowrap text-center">작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activeReservations.map(r => renderReservationRow(r)).join('')}
+            </tbody>
+          </table>
+        </div>
   `;
     }
   } catch (error) {
@@ -602,12 +602,11 @@ window.openReservationModal = async (equipmentId) => {
 
   currentEquipmentId = equipmentId;
 
-  // Close equipment modal if open
+  // Close equipment modal if open and currently shown
   const eqModalEl = document.getElementById('equipmentModal');
   const eqModalInst = bootstrap.Modal.getInstance(eqModalEl);
-  if (eqModalInst) {
+  if (eqModalInst && eqModalEl.classList.contains('show')) {
     eqModalInst.hide();
-    // Wait for modal hide animation to complete
     await new Promise(resolve => {
       eqModalEl.addEventListener('hidden.bs.modal', resolve, { once: true });
     });
@@ -671,7 +670,7 @@ const initIndexPage = () => {
       const duration = parseInt(document.getElementById('reservationDuration').value);
       const purpose = document.getElementById('reservationPurpose').value;
 
-      const startDateTime = new Date(`${dateStr}T${startTime} `);
+      const startDateTime = new Date(`${dateStr}T${startTime.trim()}`);
       const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
       const now = new Date();
 
