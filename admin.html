@@ -179,142 +179,141 @@
         </div>
       </div>
     </div>
-  </div>
 
 
-  <!-- Reservation Management -->
-  <div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="bi bi-calendar-check"></i> 예약 관리</h5>
-      <button class="btn btn-outline-secondary btn-sm" onclick="loadReservationManagement()">
-        <i class="bi bi-arrow-clockwise"></i> 새로고침
-      </button>
-    </div>
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>장비</th>
-              <th>사용자</th>
-              <th>시작</th>
-              <th>종료</th>
-              <th>상태</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody id="reservationManagementTable">
-            <tr>
-              <td colspan="7" class="text-center">
-                <div class="spinner-border text-primary"></div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Reservation Management -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar-check"></i> 예약 관리</h5>
+        <button class="btn btn-outline-secondary btn-sm" onclick="loadReservationManagement()">
+          <i class="bi bi-arrow-clockwise"></i> 새로고침
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>장비</th>
+                <th>사용자</th>
+                <th>시작</th>
+                <th>종료</th>
+                <th>상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="reservationManagementTable">
+              <tr>
+                <td colspan="7" class="text-center">
+                  <div class="spinner-border text-primary"></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Statistics Period Selector -->
-  <div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="bi bi-funnel"></i> 통계 기간 선택</h5>
-      <button class="btn btn-success btn-sm" onclick="exportStatsToExcel()">
-        <i class="bi bi-file-earmark-spreadsheet"></i> 엑셀 다운로드
-      </button>
-    </div>
-    <div class="card-body">
-      <div class="row align-items-end">
-        <div class="col-md-3 mb-2">
-          <label for="statsStartDate" class="form-label">시작일</label>
-          <input type="date" class="form-control" id="statsStartDate">
-        </div>
-        <div class="col-md-3 mb-2">
-          <label for="statsEndDate" class="form-label">종료일</label>
-          <input type="date" class="form-control" id="statsEndDate">
-        </div>
-        <div class="col-md-4 mb-2">
-          <label class="form-label">빠른 선택</label>
-          <div class="btn-group w-100" role="group">
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('thisMonth')">이번
-              달</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('lastMonth')">지난
-              달</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('last3Months')">최근
-              3개월</button>
-            <button type="button" class="btn btn-outline-primary btn-sm"
-              onclick="setStatsPeriod('thisYear')">올해</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setStatsPeriod('all')">전체</button>
+    <!-- Statistics Period Selector -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> 통계 기간 선택</h5>
+        <button class="btn btn-success btn-sm" onclick="exportStatsToExcel()">
+          <i class="bi bi-file-earmark-spreadsheet"></i> 엑셀 다운로드
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="row align-items-end">
+          <div class="col-md-3 mb-2">
+            <label for="statsStartDate" class="form-label">시작일</label>
+            <input type="date" class="form-control" id="statsStartDate">
           </div>
-        </div>
-        <div class="col-md-2 mb-2">
-          <button class="btn btn-primary w-100" onclick="applyStatsPeriod()">
-            <i class="bi bi-search"></i> 조회
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Statistics Section -->
-  <div class="row">
-    <!-- Equipment Stats -->
-    <div class="col-lg-6 mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-bar-chart"></i> 장비별 예약 통계</h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>장비명</th>
-                  <th class="text-center">총 예약</th>
-                  <th class="text-center">확정</th>
-                  <th class="text-center">총 시간</th>
-                </tr>
-              </thead>
-              <tbody id="equipmentStatsTable">
-                <tr>
-                  <td colspan="4" class="text-center text-muted">통계 로딩 중...</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="col-md-3 mb-2">
+            <label for="statsEndDate" class="form-label">종료일</label>
+            <input type="date" class="form-control" id="statsEndDate">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label">빠른 선택</label>
+            <div class="btn-group w-100" role="group">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('thisMonth')">이번
+                달</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('lastMonth')">지난
+                달</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('last3Months')">최근
+                3개월</button>
+              <button type="button" class="btn btn-outline-primary btn-sm"
+                onclick="setStatsPeriod('thisYear')">올해</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setStatsPeriod('all')">전체</button>
+            </div>
+          </div>
+          <div class="col-md-2 mb-2">
+            <button class="btn btn-primary w-100" onclick="applyStatsPeriod()">
+              <i class="bi bi-search"></i> 조회
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- User Stats -->
-    <div class="col-lg-6 mb-4">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-people"></i> 사용자별 예약 통계</h5>
+    <!-- Statistics Section -->
+    <div class="row">
+      <!-- Equipment Stats -->
+      <div class="col-lg-6 mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-bar-chart"></i> 장비별 예약 통계</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>장비명</th>
+                    <th class="text-center">총 예약</th>
+                    <th class="text-center">확정</th>
+                    <th class="text-center">총 시간</th>
+                  </tr>
+                </thead>
+                <tbody id="equipmentStatsTable">
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">통계 로딩 중...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>사용자</th>
-                  <th class="text-center">총 예약</th>
-                  <th class="text-center">확정</th>
-                  <th class="text-center">총 시간</th>
-                </tr>
-              </thead>
-              <tbody id="userStatsTable">
-                <tr>
-                  <td colspan="4" class="text-center text-muted">통계 로딩 중...</td>
-                </tr>
-              </tbody>
-            </table>
+      </div>
+
+      <!-- User Stats -->
+      <div class="col-lg-6 mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-people"></i> 사용자별 예약 통계</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>사용자</th>
+                    <th class="text-center">총 예약</th>
+                    <th class="text-center">확정</th>
+                    <th class="text-center">총 시간</th>
+                  </tr>
+                </thead>
+                <tbody id="userStatsTable">
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">통계 로딩 중...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
   </div>
 
   <!-- Equipment Modal -->
