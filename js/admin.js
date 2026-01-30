@@ -787,15 +787,21 @@ const loadUserPermissionSummary = async () => {
           <td>${getUserRoleLabel(u.user_role)}</td>
           <td><span class="badge bg-primary">${u.permission_count}</span></td>
           <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="editUser(${u.id})" title="수정">
+              <i class="bi bi-pencil"></i>
+            </button>
             <button class="btn btn-sm btn-outline-success" onclick="openUserPermissionModal(${u.id}, '${u.username}')" title="권한 관리">
               <i class="bi bi-person-check"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id}, '${u.username}')" title="삭제">
+              <i class="bi bi-trash"></i>
             </button>
           </td>
         </tr>
       `).join('');
     }
   } catch (error) {
-    container.innerHTML = `<tr><td colspan="5" class="text-danger">로드 실패</td></tr>`;
+    container.innerHTML = `<tr><td colspan="6" class="text-danger">로드 실패</td></tr>`;
   }
 };
 
@@ -999,6 +1005,65 @@ const openManagerModal = async (equipmentId, equipmentName) => {
   }
 };
 
+// ===== User Edit/Delete Functions =====
+const editUser = async (userId) => {
+  try {
+    const user = await apiRequest(`/auth/users/${userId}`);
+
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUserName').value = user.username || '';
+    document.getElementById('editUserEmail').value = user.email || '';
+    document.getElementById('editUserDepartment').value = user.department || '';
+    document.getElementById('editUserPhone').value = user.phone || '';
+    document.getElementById('editUserRole').value = user.user_role || 'staff';
+    document.getElementById('editUserSupervisor').value = user.supervisor || '';
+
+    const modal = new bootstrap.Modal(document.getElementById('userEditModal'));
+    modal.show();
+  } catch (error) {
+    alert('사용자 정보 로드 실패: ' + error.message);
+  }
+};
+
+const deleteUser = async (userId, username) => {
+  if (!confirm(`"${username}" 사용자를 삭제하시겠습니까?\n\n관련된 권한도 함께 삭제됩니다.`)) return;
+
+  try {
+    await apiRequest(`/auth/users/${userId}`, { method: 'DELETE' });
+    alert('사용자가 삭제되었습니다.');
+    loadUserPermissionSummary();
+  } catch (error) {
+    alert('사용자 삭제 실패: ' + error.message);
+  }
+};
+
+// User edit form handler
+document.getElementById('userEditForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const userId = document.getElementById('editUserId').value;
+
+  try {
+    await apiRequest(`/auth/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        username: document.getElementById('editUserName').value,
+        email: document.getElementById('editUserEmail').value,
+        department: document.getElementById('editUserDepartment').value,
+        phone: document.getElementById('editUserPhone').value,
+        userRole: document.getElementById('editUserRole').value,
+        supervisor: document.getElementById('editUserSupervisor').value
+      })
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById('userEditModal')).hide();
+    alert('사용자 정보가 수정되었습니다.');
+    loadUserPermissionSummary();
+  } catch (error) {
+    alert('사용자 수정 실패: ' + error.message);
+  }
+});
+
 
 
 // ===== Initialize Admin Page =====
@@ -1015,4 +1080,3 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load permission summaries
   loadUserPermissionSummary();
 });
-
