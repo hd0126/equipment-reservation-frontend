@@ -242,18 +242,34 @@ const showEquipmentDetails = async (equipmentId) => {
             <div class="card-header py-2">
               <h6 class="mb-0"><i class="bi bi-journal-text"></i> 장비 이력</h6>
             </div>
-            <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+            <div class="card-body p-2" style="max-height: 160px; overflow-y: auto;">
               ${logs.length > 0 ? `
                 <div class="list-group list-group-flush">
-                  ${logs.map(log => `
+                  ${logs.map(log => {
+      const currentUser = getCurrentUser();
+      const canModify = currentUser && (currentUser.id === log.user_id || currentUser.user_role === 'admin' || currentUser.user_role === 'equipment_manager');
+      return `
                     <div class="list-group-item p-2">
-                      <div class="d-flex justify-content-between">
-                        <small class="fw-bold">${log.username || '시스템'}</small>
-                        <small class="text-muted">${new Date(log.created_at).toLocaleDateString('ko-KR')}</small>
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <small class="fw-bold">${log.username || '시스템'}</small>
+                          <small class="text-muted ms-2">${new Date(log.created_at).toLocaleDateString('ko-KR')}</small>
+                        </div>
+                        ${canModify ? `
+                          <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary btn-sm py-0 px-1" onclick="editLog(${log.id}, '${log.content.replace(/'/g, "\\'")}')" title="수정">
+                              <i class="bi bi-pencil" style="font-size:0.7rem;"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="deleteLog(${log.id}, ${equipmentId})" title="삭제">
+                              <i class="bi bi-trash" style="font-size:0.7rem;"></i>
+                            </button>
+                          </div>
+                        ` : ''}
                       </div>
-                      <small>${log.content}</small>
+                      <small class="log-content-${log.id}">${log.content}</small>
                     </div>
-                  `).join('')}
+                  `;
+    }).join('')}
                 </div>
               ` : '<p class="text-muted small mb-0">이력 없음</p>'}
             </div>
@@ -270,10 +286,13 @@ const showEquipmentDetails = async (equipmentId) => {
           </div>
           
           <!-- Upcoming Reservations -->
-          <div class="mb-3">
-            <h6>예정된 예약</h6>
+          <div class="card">
+            <div class="card-header py-2">
+              <h6 class="mb-0"><i class="bi bi-calendar-check"></i> 예정된 예약</h6>
+            </div>
+            <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
             ${reservations.length > 0 ? `
-              <div class="list-group" style="max-height: 150px; overflow-y: auto;">
+              <div class="list-group list-group-flush">
                 ${reservations.slice(0, 5).map(r => `
                   <div class="list-group-item p-2">
                     <div class="d-flex justify-content-between">
@@ -284,7 +303,8 @@ const showEquipmentDetails = async (equipmentId) => {
                   </div>
                 `).join('')}
               </div>
-            ` : '<p class="text-muted small">예약 없음</p>'}
+            ` : '<p class="text-muted small mb-0">예약 없음</p>'}
+            </div>
           </div>
         </div>
       </div>
@@ -323,6 +343,39 @@ const showEquipmentDetails = async (equipmentId) => {
 
   } catch (error) {
     alert('장비 정보를 불러오는데 실패했습니다: ' + error.message);
+  }
+};
+
+// Edit equipment log
+const editLog = async (logId, currentContent) => {
+  const newContent = prompt('이력 내용을 수정하세요:', currentContent);
+  if (!newContent || newContent.trim() === '' || newContent === currentContent) return;
+
+  try {
+    await apiRequest(`/equipment-logs/${logId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content: newContent })
+    });
+    alert('이력이 수정되었습니다.');
+    window.location.reload();
+  } catch (error) {
+    alert('이력 수정 실패: ' + error.message);
+  }
+};
+
+// Delete equipment log
+const deleteLog = async (logId, equipmentId) => {
+  if (!confirm('이 이력을 삭제하시겠습니까?')) return;
+
+  try {
+    await apiRequest(`/equipment-logs/${logId}`, {
+      method: 'DELETE'
+    });
+    alert('이력이 삭제되었습니다.');
+    // Refresh the equipment details modal
+    showEquipmentDetails(equipmentId);
+  } catch (error) {
+    alert('이력 삭제 실패: ' + error.message);
   }
 };
 
