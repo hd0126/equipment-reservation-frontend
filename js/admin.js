@@ -99,7 +99,7 @@ const loadEquipmentManagement = async () => {
     if (equipment.length === 0) {
       container.innerHTML = `
         <tr>
-          <td colspan="5" class="text-center text-muted">등록된 장비가 없습니다</td>
+          <td colspan="6" class="text-center text-muted">등록된 장비가 없습니다</td>
         </tr>
       `;
     } else {
@@ -112,6 +112,12 @@ const loadEquipmentManagement = async () => {
             <td>${e.id}</td>
             <td><strong>${e.name}</strong></td>
             <td>${e.location || '-'}</td>
+            <td>
+              ${e.manager_name ? `<span class="badge bg-info">${e.manager_name}</span>` : '<span class="text-muted">-</span>'}
+              <button class="btn btn-sm btn-outline-secondary ms-1" onclick="openManagerModal(${e.id}, '${e.name}')" title="담당자 지정">
+                <i class="bi bi-person-gear"></i>
+              </button>
+            </td>
             <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
             <td>
               <button class="btn btn-sm btn-outline-primary" onclick="editEquipment(${e.id})" title="수정">
@@ -131,7 +137,7 @@ const loadEquipmentManagement = async () => {
   } catch (error) {
     container.innerHTML = `
       <tr>
-        <td colspan="5" class="text-center text-danger">장비 목록 로드 실패: ${error.message}</td>
+        <td colspan="6" class="text-center text-danger">장비 목록 로드 실패: ${error.message}</td>
       </tr>
     `;
   }
@@ -736,3 +742,166 @@ const revokePermission = async (equipmentId, userId) => {
     alert('권한 취소 실패: ' + error.message);
   }
 };
+
+// ===== Permission Summary Functions =====
+
+// Load user permission summary
+const loadUserPermissionSummary = async () => {
+  const container = document.getElementById('userPermissionSummary');
+  if (!container) return;
+
+  try {
+    const summary = await apiRequest('/permissions/summary/users');
+
+    if (summary.length === 0) {
+      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">일반 사용자 없음</td></tr>';
+    } else {
+      container.innerHTML = summary.map(u => `
+        <tr>
+          <td>${u.username}</td>
+          <td>${getDepartmentLabel(u.department)}</td>
+          <td>${getUserRoleLabel(u.user_role)}</td>
+          <td><span class="badge bg-primary">${u.permission_count}</span></td>
+          <td>
+            <button class="btn btn-sm btn-outline-info" onclick="showUserPermissions(${u.id}, '${u.username}')">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (error) {
+    container.innerHTML = `<tr><td colspan="5" class="text-danger">로드 실패</td></tr>`;
+  }
+};
+
+// Load equipment permission summary
+const loadEquipmentPermissionSummary = async () => {
+  const container = document.getElementById('equipmentPermissionSummary');
+  if (!container) return;
+
+  try {
+    const summary = await apiRequest('/permissions/summary/equipment');
+
+    if (summary.length === 0) {
+      container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">장비 없음</td></tr>';
+    } else {
+      container.innerHTML = summary.map(e => `
+        <tr>
+          <td>${e.name}</td>
+          <td>${e.manager_name || '-'}</td>
+          <td><span class="badge bg-success">${e.permission_count}</span></td>
+          <td>
+            <button class="btn btn-sm btn-outline-info" onclick="openPermissionModal(${e.id}, '${e.name}')">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (error) {
+    container.innerHTML = `<tr><td colspan="4" class="text-danger">로드 실패</td></tr>`;
+  }
+};
+
+// Show user's permissions in alert
+const showUserPermissions = async (userId, username) => {
+  try {
+    const permissions = await apiRequest(`/permissions/user/${userId}`);
+
+    if (permissions.length === 0) {
+      alert(`${username}님은 권한이 부여된 장비가 없습니다.`);
+    } else {
+      const list = permissions.map(p => `- ${p.equipment_name} (${new Date(p.granted_at).toLocaleDateString('ko-KR')})`).join('\n');
+      alert(`${username}님의 권한 목록:\n\n${list}`);
+    }
+  } catch (error) {
+    alert('권한 조회 실패: ' + error.message);
+  }
+};
+
+// Export all permissions to Excel
+const exportPermissions = async () => {
+  try {
+    const permissions = await apiRequest('/permissions/export/all');
+
+    if (permissions.length === 0) {
+      alert('내보낼 권한 정보가 없습니다.');
+      return;
+    }
+
+    // Format data for Excel
+    const data = permissions.map(p => ({
+      '장비명': p.equipment_name,
+      '위치': p.location || '',
+      '사용자': p.username,
+      '이메일': p.email,
+      '소속': getDepartmentLabel(p.department),
+      '신분': getUserRoleLabel(p.user_role),
+      '연수책임자': p.supervisor || '',
+      '권한부여자': p.granted_by_name || '',
+      '부여일': new Date(p.granted_at).toLocaleDateString('ko-KR')
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '권한현황');
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `장비권한현황_${dateStr}.xlsx`);
+  } catch (error) {
+    alert('권한 내보내기 실패: ' + error.message);
+  }
+};
+
+// ===== Manager Assignment Functions =====
+
+// Open manager assignment modal (simple prompt version)
+const openManagerModal = async (equipmentId, equipmentName) => {
+  try {
+    const candidates = await apiRequest('/equipment/managers/candidates');
+
+    if (candidates.length === 0) {
+      alert('담당자로 지정할 수 있는 사용자가 없습니다. (equipment_manager 또는 admin 역할 필요)');
+      return;
+    }
+
+    const options = candidates.map((c, i) => `${i + 1}. ${c.username} (${getDepartmentLabel(c.department)})`).join('\n');
+    const choice = prompt(`${equipmentName}의 담당자를 지정하세요:\n\n${options}\n\n번호 입력 (취소: 빈칸):`);
+
+    if (!choice || choice.trim() === '') return;
+
+    const idx = parseInt(choice) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= candidates.length) {
+      alert('올바른 번호를 입력하세요.');
+      return;
+    }
+
+    await apiRequest(`/equipment/${equipmentId}/manager`, {
+      method: 'PUT',
+      body: JSON.stringify({ managerId: candidates[idx].id })
+    });
+
+    alert(`${equipmentName}의 담당자가 ${candidates[idx].username}(으)로 지정되었습니다.`);
+    loadEquipmentManagement();
+    loadEquipmentPermissionSummary();
+  } catch (error) {
+    alert('담당자 지정 실패: ' + error.message);
+  }
+};
+
+// ===== Initialize Admin Page =====
+document.addEventListener('DOMContentLoaded', () => {
+  // Check admin access
+  requireAdmin();
+
+  // Load all data
+  loadDashboardStats();
+  loadEquipmentManagement();
+  loadReservationManagement();
+  loadStatistics();
+
+  // Load permission summaries
+  loadUserPermissionSummary();
+  loadEquipmentPermissionSummary();
+});
