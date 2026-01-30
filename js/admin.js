@@ -217,24 +217,27 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentStatus').value = equipment.status;
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 현재 문서 파일 표시
+    // 현재 문서 파일 표시 (삭제 버튼 포함)
     const currentBrochure = document.getElementById('currentBrochure');
     const currentManual = document.getElementById('currentManual');
     const currentQuickGuide = document.getElementById('currentQuickGuide');
 
     if (currentBrochure) {
       currentBrochure.innerHTML = equipment.brochure_url
-        ? `<a href="${equipment.brochure_url}" target="_blank">📄 현재 파일 보기</a>`
+        ? `<a href="${equipment.brochure_url}" target="_blank">📄 현재 파일 보기</a>
+           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'brochure', '${equipment.brochure_url}')">❌ 삭제</button>`
         : '';
     }
     if (currentManual) {
       currentManual.innerHTML = equipment.manual_url
-        ? `<a href="${equipment.manual_url}" target="_blank">📄 현재 파일 보기</a>`
+        ? `<a href="${equipment.manual_url}" target="_blank">📄 현재 파일 보기</a>
+           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'manual', '${equipment.manual_url}')">❌ 삭제</button>`
         : '';
     }
     if (currentQuickGuide) {
       currentQuickGuide.innerHTML = equipment.quick_guide_url
-        ? `<a href="${equipment.quick_guide_url}" target="_blank">📄 현재 파일 보기</a>`
+        ? `<a href="${equipment.quick_guide_url}" target="_blank">📄 현재 파일 보기</a>
+           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'quick_guide', '${equipment.quick_guide_url}')">❌ 삭제</button>`
         : '';
     }
 
@@ -257,8 +260,21 @@ const fileToBase64 = (file) => {
   });
 };
 
+// 파일 크기 검증 (20MB 제한)
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const validateFileSize = (file) => {
+  if (file.size > MAX_FILE_SIZE) {
+    alert(`파일 크기가 너무 큽니다.\n\n선택한 파일: ${(file.size / 1024 / 1024).toFixed(2)}MB\n최대 허용: 20MB\n\n더 작은 파일을 선택해주세요.`);
+    return false;
+  }
+  return true;
+};
+
 // 문서 파일 업로드
 const uploadDocument = async (file, type, equipmentId) => {
+  if (!validateFileSize(file)) {
+    throw new Error('파일 크기 초과');
+  }
   const base64 = await fileToBase64(file);
   const response = await apiRequest('/upload', {
     method: 'POST',
@@ -271,6 +287,61 @@ const uploadDocument = async (file, type, equipmentId) => {
   });
   return response.url;
 };
+
+// 문서 파일 삭제
+const deleteDocument = async (equipmentId, type, fileUrl) => {
+  if (!confirm('이 문서를 삭제하시겠습니까?')) {
+    return false;
+  }
+  try {
+    await apiRequest('/upload', {
+      method: 'DELETE',
+      body: JSON.stringify({
+        equipmentId: equipmentId,
+        type: type,
+        fileUrl: fileUrl
+      })
+    });
+    alert('문서가 삭제되었습니다.');
+    return true;
+  } catch (error) {
+    alert('문서 삭제 실패: ' + error.message);
+    return false;
+  }
+};
+
+// 글로벌 삭제 핸들러 (onclick에서 호출)
+window.handleDeleteDocument = async (equipmentId, type, fileUrl) => {
+  const deleted = await deleteDocument(equipmentId, type, fileUrl);
+  if (deleted) {
+    // 삭제 후 UI 업데이트
+    const elementId = {
+      'brochure': 'currentBrochure',
+      'manual': 'currentManual',
+      'quick_guide': 'currentQuickGuide'
+    }[type];
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.innerHTML = '';
+    }
+  }
+};
+
+// 파일 선택 시 즉시 크기 검증
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInputs = ['equipmentBrochure', 'equipmentManual', 'equipmentQuickGuide'];
+  fileInputs.forEach(inputId => {
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && !validateFileSize(file)) {
+          e.target.value = ''; // 파일 선택 취소
+        }
+      });
+    }
+  });
+});
 
 // Handle equipment form submission
 document.addEventListener('DOMContentLoaded', () => {
