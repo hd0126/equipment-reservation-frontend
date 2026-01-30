@@ -94,18 +94,30 @@ const loadEquipmentManagement = async () => {
   showLoading(container);
 
   try {
-    const equipment = await getEquipment();
+    const [equipment, permissionData] = await Promise.all([
+      getEquipment(),
+      apiRequest('/permissions/summary').catch(() => ({ equipmentSummary: [] }))
+    ]);
+
+    // Create permission count map
+    const permissionCountMap = {};
+    if (permissionData.equipmentSummary) {
+      permissionData.equipmentSummary.forEach(e => {
+        permissionCountMap[e.id] = e.permission_count;
+      });
+    }
 
     if (equipment.length === 0) {
       container.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center text-muted">등록된 장비가 없습니다</td>
+          <td colspan="7" class="text-center text-muted">등록된 장비가 없습니다</td>
         </tr>
       `;
     } else {
       container.innerHTML = equipment.map(e => {
         const statusClass = e.status === 'available' ? 'status-available' : 'status-maintenance';
         const statusText = e.status === 'available' ? '사용 가능' : '점검 중';
+        const permCount = permissionCountMap[e.id] || 0;
 
         return `
           <tr>
@@ -117,6 +129,11 @@ const loadEquipmentManagement = async () => {
               <button class="btn btn-sm btn-outline-secondary ms-1" onclick="openManagerModal(${e.id}, '${e.name}')" title="담당자 지정">
                 <i class="bi bi-person-gear"></i>
               </button>
+            </td>
+            <td>
+              <span class="badge bg-primary" onclick="openPermissionModal(${e.id}, '${e.name}')" style="cursor:pointer;" title="권한 관리">
+                ${permCount}명
+              </span>
             </td>
             <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
             <td>
@@ -137,11 +154,12 @@ const loadEquipmentManagement = async () => {
   } catch (error) {
     container.innerHTML = `
       <tr>
-        <td colspan="6" class="text-center text-danger">장비 목록 로드 실패: ${error.message}</td>
+        <td colspan="7" class="text-center text-danger">장비 목록 로드 실패: ${error.message}</td>
       </tr>
     `;
   }
 };
+
 
 // Load reservation management
 const loadReservationManagement = async () => {
@@ -905,6 +923,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load permission summaries
   loadUserPermissionSummary();
-  loadEquipmentPermissionSummary();
 });
 
