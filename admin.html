@@ -157,16 +157,17 @@
           <table class="table table-hover">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>사용자</th>
                 <th>소속</th>
                 <th>신분</th>
                 <th>권한 수</th>
-                <th>상세</th>
+                <th>작업</th>
               </tr>
             </thead>
             <tbody id="userPermissionSummary">
               <tr>
-                <td colspan="5" class="text-center text-muted">로딩 중...</td>
+                <td colspan="6" class="text-center text-muted">로딩 중...</td>
               </tr>
             </tbody>
           </table>
@@ -450,6 +451,73 @@
                   <tbody id="permissionList">
                     <tr>
                       <td colspan="5" class="text-center text-muted">권한자 없음</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Permission Management Modal -->
+  <div class="modal fade" id="userPermissionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-check"></i> 사용자 권한 관리 - <span id="userPermissionName"></span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="userPermissionUserId">
+
+          <!-- Grant Permission Section -->
+          <div class="card mb-3">
+            <div class="card-header py-2">
+              <h6 class="mb-0"><i class="bi bi-plus-circle"></i> 장비 권한 부여</h6>
+            </div>
+            <div class="card-body p-2">
+              <div class="row g-2">
+                <div class="col-md-8">
+                  <select class="form-select form-select-sm" id="userEquipmentSelect">
+                    <option value="">장비 선택...</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <button class="btn btn-primary btn-sm w-100" onclick="grantUserPermission()">
+                    <i class="bi bi-plus"></i> 권한 부여
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Permissions -->
+          <div class="card">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+              <h6 class="mb-0"><i class="bi bi-gear"></i> 보유 장비 권한</h6>
+              <span class="badge bg-primary" id="userPermissionCount">0개</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>장비명</th>
+                      <th>위치</th>
+                      <th>부여일</th>
+                      <th>취소</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userPermissionList">
+                    <tr>
+                      <td colspan="4" class="text-center text-muted">로딩 중...</td>
                     </tr>
                   </tbody>
                 </table>

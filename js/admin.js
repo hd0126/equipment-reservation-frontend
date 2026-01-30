@@ -777,17 +777,18 @@ const loadUserPermissionSummary = async () => {
     const data = await apiRequest('/permissions/summary');
     const summary = data.userSummary || [];
     if (summary.length === 0) {
-      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">일반 사용자 없음</td></tr>';
+      container.innerHTML = '<tr><td colspan="6" class="text-center text-muted">사용자 없음</td></tr>';
     } else {
       container.innerHTML = summary.map(u => `
         <tr>
-          <td>${u.username}</td>
+          <td>${u.id}</td>
+          <td><strong>${u.username}</strong></td>
           <td>${getDepartmentLabel(u.department)}</td>
           <td>${getUserRoleLabel(u.user_role)}</td>
           <td><span class="badge bg-primary">${u.permission_count}</span></td>
           <td>
-            <button class="btn btn-sm btn-outline-info" onclick="showUserPermissions(${u.id}, '${u.username}')">
-              <i class="bi bi-eye"></i>
+            <button class="btn btn-sm btn-outline-success" onclick="openUserPermissionModal(${u.id}, '${u.username}')" title="권한 관리">
+              <i class="bi bi-person-check"></i>
             </button>
           </td>
         </tr>
@@ -827,19 +828,104 @@ const loadEquipmentPermissionSummary = async () => {
   }
 };
 
-// Show user's permissions in alert
-const showUserPermissions = async (userId, username) => {
+// Open user permission modal
+const openUserPermissionModal = async (userId, username) => {
+  document.getElementById('userPermissionUserId').value = userId;
+  document.getElementById('userPermissionName').textContent = username;
+
+  const modal = new bootstrap.Modal(document.getElementById('userPermissionModal'));
+  modal.show();
+
+  await loadUserPermissions(userId);
+  await loadUserEquipmentCandidates(userId);
+};
+
+// Load user's current permissions
+const loadUserPermissions = async (userId) => {
+  const container = document.getElementById('userPermissionList');
+  const countBadge = document.getElementById('userPermissionCount');
+
   try {
     const permissions = await apiRequest(`/permissions/user/${userId}`);
 
+    if (countBadge) countBadge.textContent = `${permissions.length}개`;
+
     if (permissions.length === 0) {
-      alert(`${username}님은 권한이 부여된 장비가 없습니다.`);
+      container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">권한 없음</td></tr>';
     } else {
-      const list = permissions.map(p => `- ${p.equipment_name} (${new Date(p.granted_at).toLocaleDateString('ko-KR')})`).join('\n');
-      alert(`${username}님의 권한 목록:\n\n${list}`);
+      container.innerHTML = permissions.map(p => `
+        <tr>
+          <td>${p.equipment_name}</td>
+          <td>${p.location || '-'}</td>
+          <td>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" onclick="revokeUserPermission(${p.equipment_id}, ${userId})">
+              <i class="bi bi-x"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
     }
   } catch (error) {
-    alert('권한 조회 실패: ' + error.message);
+    container.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패</td></tr>`;
+    if (countBadge) countBadge.textContent = '0개';
+  }
+};
+
+// Load equipment not yet assigned to user
+const loadUserEquipmentCandidates = async (userId) => {
+  const select = document.getElementById('userEquipmentSelect');
+  try {
+    const permissions = await apiRequest(`/permissions/user/${userId}`);
+    const equipment = await getEquipment();
+    const permittedIds = permissions.map(p => p.equipment_id);
+    const candidates = equipment.filter(e => !permittedIds.includes(e.id));
+
+    select.innerHTML = '<option value="">장비 선택...</option>' +
+      candidates.map(e => `<option value="${e.id}">${e.name} (${e.location || '-'})</option>`).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">로드 실패</option>';
+  }
+};
+
+// Grant permission from user side
+const grantUserPermission = async () => {
+  const userId = document.getElementById('userPermissionUserId').value;
+  const equipmentId = document.getElementById('userEquipmentSelect').value;
+
+  if (!equipmentId) {
+    alert('장비를 선택해주세요.');
+    return;
+  }
+
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/grant`, {
+      method: 'POST',
+      body: JSON.stringify({ userId: parseInt(userId) })
+    });
+    await loadUserPermissions(userId);
+    await loadUserEquipmentCandidates(userId);
+    loadUserPermissionSummary();
+    loadEquipmentManagement();
+  } catch (error) {
+    alert('권한 부여 실패: ' + error.message);
+  }
+};
+
+// Revoke permission from user side
+const revokeUserPermission = async (equipmentId, userId) => {
+  if (!confirm('이 장비 권한을 취소하시겠습니까?')) return;
+
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/revoke/${userId}`, {
+      method: 'DELETE'
+    });
+    await loadUserPermissions(userId);
+    await loadUserEquipmentCandidates(userId);
+    loadUserPermissionSummary();
+    loadEquipmentManagement();
+  } catch (error) {
+    alert('권한 취소 실패: ' + error.message);
   }
 };
 
