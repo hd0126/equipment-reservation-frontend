@@ -751,8 +751,8 @@ const loadUserPermissionSummary = async () => {
   if (!container) return;
 
   try {
-    const summary = await apiRequest('/permissions/summary/users');
-
+    const data = await apiRequest('/permissions/summary');
+    const summary = data.userSummary || [];
     if (summary.length === 0) {
       container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">일반 사용자 없음</td></tr>';
     } else {
@@ -781,8 +781,8 @@ const loadEquipmentPermissionSummary = async () => {
   if (!container) return;
 
   try {
-    const summary = await apiRequest('/permissions/summary/equipment');
-
+    const data = await apiRequest('/permissions/summary');
+    const summary = data.equipmentSummary || [];
     if (summary.length === 0) {
       container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">장비 없음</td></tr>';
     } else {
@@ -890,6 +890,8 @@ const openManagerModal = async (equipmentId, equipmentName) => {
   }
 };
 
+
+
 // ===== Initialize Admin Page =====
 document.addEventListener('DOMContentLoaded', () => {
   // Check admin access
@@ -905,3 +907,4 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUserPermissionSummary();
   loadEquipmentPermissionSummary();
 });
+
