@@ -192,10 +192,14 @@
           <div class="col-md-4 mb-2">
             <label class="form-label">빠른 선택</label>
             <div class="btn-group w-100" role="group">
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('thisMonth')">이번 달</button>
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('lastMonth')">지난 달</button>
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('last3Months')">최근 3개월</button>
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('thisYear')">올해</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('thisMonth')">이번
+                달</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('lastMonth')">지난
+                달</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStatsPeriod('last3Months')">최근
+                3개월</button>
+              <button type="button" class="btn btn-outline-primary btn-sm"
+                onclick="setStatsPeriod('thisYear')">올해</button>
               <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setStatsPeriod('all')">전체</button>
             </div>
           </div>
@@ -311,6 +315,28 @@
             <div class="mb-3">
               <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
               <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
+            </div>
+
+            <!-- 문서 업로드 섹션 -->
+            <hr>
+            <h6 class="mb-3"><i class="bi bi-file-earmark-pdf"></i> 문서 파일</h6>
+
+            <div class="mb-3">
+              <label for="equipmentBrochure" class="form-label">장비 소개 자료 (PDF)</label>
+              <input type="file" class="form-control" id="equipmentBrochure" accept=".pdf">
+              <small class="text-muted" id="currentBrochure"></small>
+            </div>
+
+            <div class="mb-3">
+              <label for="equipmentManual" class="form-label">매뉴얼 (PDF)</label>
+              <input type="file" class="form-control" id="equipmentManual" accept=".pdf">
+              <small class="text-muted" id="currentManual"></small>
+            </div>
+
+            <div class="mb-3">
+              <label for="equipmentQuickGuide" class="form-label">간단 매뉴얼 (PDF)</label>
+              <input type="file" class="form-control" id="equipmentQuickGuide" accept=".pdf">
+              <small class="text-muted" id="currentQuickGuide"></small>
             </div>
 
             <div class="d-grid">

@@ -217,6 +217,27 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentStatus').value = equipment.status;
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
+    // 현재 문서 파일 표시
+    const currentBrochure = document.getElementById('currentBrochure');
+    const currentManual = document.getElementById('currentManual');
+    const currentQuickGuide = document.getElementById('currentQuickGuide');
+
+    if (currentBrochure) {
+      currentBrochure.innerHTML = equipment.brochure_url
+        ? `<a href="${equipment.brochure_url}" target="_blank">📄 현재 파일 보기</a>`
+        : '';
+    }
+    if (currentManual) {
+      currentManual.innerHTML = equipment.manual_url
+        ? `<a href="${equipment.manual_url}" target="_blank">📄 현재 파일 보기</a>`
+        : '';
+    }
+    if (currentQuickGuide) {
+      currentQuickGuide.innerHTML = equipment.quick_guide_url
+        ? `<a href="${equipment.quick_guide_url}" target="_blank">📄 현재 파일 보기</a>`
+        : '';
+    }
+
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
 
     const modal = new bootstrap.Modal(document.getElementById('equipmentModal'));
@@ -224,6 +245,31 @@ window.editEquipment = async (id) => {
   } catch (error) {
     alert('장비 정보를 불러오는데 실패했습니다: ' + error.message);
   }
+};
+
+// 파일을 Base64로 변환
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+};
+
+// 문서 파일 업로드
+const uploadDocument = async (file, type, equipmentId) => {
+  const base64 = await fileToBase64(file);
+  const response = await apiRequest('/upload', {
+    method: 'POST',
+    body: JSON.stringify({
+      file: base64,
+      filename: file.name,
+      type: type,
+      equipmentId: equipmentId
+    })
+  });
+  return response.url;
 };
 
 // Handle equipment form submission
@@ -235,13 +281,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create FormData or JSON payload
       const formData = new FormData();
-      const equipmentId = document.getElementById('equipmentId').value; // Explicitly get value
+      const equipmentId = document.getElementById('equipmentId').value;
       const name = document.getElementById('equipmentName').value;
       const description = document.getElementById('equipmentDescription').value;
       const location = document.getElementById('equipmentLocation').value;
       const status = document.getElementById('equipmentStatus').value;
       const imageUrl = document.getElementById('equipmentImageUrl').value;
       const imageFile = document.getElementById('equipmentImageFile').files[0];
+
+      // 문서 파일들
+      const brochureFile = document.getElementById('equipmentBrochure')?.files[0];
+      const manualFile = document.getElementById('equipmentManual')?.files[0];
+      const quickGuideFile = document.getElementById('equipmentQuickGuide')?.files[0];
 
       formData.append('name', name);
       formData.append('description', description);
@@ -252,28 +303,59 @@ document.addEventListener('DOMContentLoaded', () => {
       if (imageFile) formData.append('image', imageFile);
 
       try {
+        let savedEquipmentId = equipmentId;
+
         if (equipmentId) {
-          // For update, currently only JSON is supported for simplicity or need backend update
-          // If you need file update, backend PUT needs Multer too.
-          // Let's stick to JSON for update unless critical.
+          // Update existing equipment
           const data = { name, description, location, status, image_url: imageUrl };
           await updateEquipment(equipmentId, data);
-          alert('장비가 수정되었습니다.');
         } else {
-          // For create, use FormData if file exists, else JSON
+          // Create new equipment
           if (imageFile) {
-            await apiRequest('/equipment', {
+            const result = await apiRequest('/equipment', {
               method: 'POST',
               body: formData,
-              // Content-Type header must be undefined for FormData to set boundary automatically
               headers: {}
             });
+            savedEquipmentId = result.id;
           } else {
             const data = { name, description, location, status, image_url: imageUrl };
-            await createEquipment(data);
+            const result = await createEquipment(data);
+            savedEquipmentId = result.id;
           }
-          alert('장비가 추가되었습니다.');
         }
+
+        // 문서 파일 업로드 (장비 저장 후)
+        if (savedEquipmentId) {
+          let brochureUrl = null, manualUrl = null, quickGuideUrl = null;
+
+          if (brochureFile) {
+            brochureUrl = await uploadDocument(brochureFile, 'brochure', savedEquipmentId);
+          }
+          if (manualFile) {
+            manualUrl = await uploadDocument(manualFile, 'manual', savedEquipmentId);
+          }
+          if (quickGuideFile) {
+            quickGuideUrl = await uploadDocument(quickGuideFile, 'quick_guide', savedEquipmentId);
+          }
+
+          // 문서 URL이 있으면 장비 업데이트
+          if (brochureUrl || manualUrl || quickGuideUrl) {
+            const existingEquipment = await getEquipmentById(savedEquipmentId);
+            await updateEquipment(savedEquipmentId, {
+              name: existingEquipment.name,
+              description: existingEquipment.description,
+              location: existingEquipment.location,
+              status: existingEquipment.status,
+              image_url: existingEquipment.image_url,
+              brochure_url: brochureUrl || existingEquipment.brochure_url,
+              manual_url: manualUrl || existingEquipment.manual_url,
+              quick_guide_url: quickGuideUrl || existingEquipment.quick_guide_url
+            });
+          }
+        }
+
+        alert(equipmentId ? '장비가 수정되었습니다.' : '장비가 추가되었습니다.');
 
         const modal = bootstrap.Modal.getInstance(document.getElementById('equipmentModal'));
         modal.hide();

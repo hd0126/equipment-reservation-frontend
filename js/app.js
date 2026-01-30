@@ -203,6 +203,28 @@ const showEquipmentDetails = async (equipmentId) => {
           <p>${equipment.description}</p>
         </div>
       ` : ''}
+      ${(equipment.brochure_url || equipment.manual_url || equipment.quick_guide_url) ? `
+        <div class="mb-3">
+          <h6><i class="bi bi-file-earmark-pdf"></i> 관련 문서</h6>
+          <div class="list-group list-group-flush">
+            ${equipment.brochure_url ? `
+              <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action">
+                <i class="bi bi-download"></i> 장비 소개 자료
+              </a>
+            ` : ''}
+            ${equipment.manual_url ? `
+              <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action">
+                <i class="bi bi-download"></i> 매뉴얼
+              </a>
+            ` : ''}
+            ${equipment.quick_guide_url ? `
+              <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action">
+                <i class="bi bi-download"></i> 간단 매뉴얼
+              </a>
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
       <div class="mb-3">
         <h6>예정된 예약</h6>
         ${reservations.length > 0 ? `
