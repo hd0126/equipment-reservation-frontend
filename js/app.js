@@ -246,8 +246,9 @@ const showEquipmentDetails = async (equipmentId) => {
               ${logs.length > 0 ? `
                 <div class="list-group list-group-flush">
                   ${logs.map(log => {
-      const currentUser = getCurrentUser();
-      const canModify = currentUser && (currentUser.id === log.user_id || currentUser.user_role === 'admin' || currentUser.user_role === 'equipment_manager');
+      const storedUser = localStorage.getItem('user');
+      const currentUser = storedUser ? JSON.parse(storedUser) : null;
+      const canModify = currentUser && (currentUser.id == log.user_id || currentUser.user_role === 'admin' || currentUser.user_role === 'equipment_manager');
       return `
                     <div class="list-group-item p-2">
                       <div class="d-flex justify-content-between align-items-start">
