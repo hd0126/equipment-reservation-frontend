@@ -175,6 +175,14 @@ const showEquipmentDetails = async (equipmentId) => {
     const equipment = await getEquipmentById(equipmentId);
     const reservations = await getEquipmentReservations(equipmentId);
 
+    // Fetch equipment logs
+    let logs = [];
+    try {
+      logs = await apiRequest(`/equipment-logs/equipment/${equipmentId}?limit=10`);
+    } catch (e) {
+      console.log('Could not fetch logs:', e);
+    }
+
     const modalTitle = document.getElementById('equipmentModalLabel');
     const modalBody = document.getElementById('equipmentDetailsBody');
 
@@ -186,69 +194,126 @@ const showEquipmentDetails = async (equipmentId) => {
 
     modalTitle.textContent = equipment.name;
     modalBody.innerHTML = `
-      <img src="${equipment.image_url || defaultImage}" class="img-fluid mb-3 rounded" alt="${equipment.name}">
-      <div class="mb-3">
-        <h6>상태</h6>
-        <span class="equipment-status ${statusClass}">${statusText}</span>
-      </div>
-      ${equipment.location ? `
-        <div class="mb-3">
-          <h6>위치</h6>
-          <p><i class="bi bi-geo-alt"></i> ${equipment.location}</p>
-        </div>
-      ` : ''}
-      ${equipment.description ? `
-        <div class="mb-3">
-          <h6>설명</h6>
-          <p>${equipment.description}</p>
-        </div>
-      ` : ''}
-      ${(equipment.brochure_url || equipment.manual_url || equipment.quick_guide_url) ? `
-        <div class="mb-3">
-          <h6><i class="bi bi-file-earmark-pdf"></i> 관련 문서</h6>
-          <div class="list-group list-group-flush">
-            ${equipment.brochure_url ? `
-              <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action">
-                <i class="bi bi-download"></i> 장비 소개 자료
-              </a>
-            ` : ''}
-            ${equipment.manual_url ? `
-              <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action">
-                <i class="bi bi-download"></i> 매뉴얼
-              </a>
-            ` : ''}
-            ${equipment.quick_guide_url ? `
-              <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action">
-                <i class="bi bi-download"></i> 간단 매뉴얼
-              </a>
-            ` : ''}
+      <div class="row">
+        <div class="col-md-7">
+          <img src="${equipment.image_url || defaultImage}" class="img-fluid mb-3 rounded" alt="${equipment.name}">
+          <div class="mb-3">
+            <h6>상태</h6>
+            <span class="equipment-status ${statusClass}">${statusText}</span>
           </div>
-        </div>
-      ` : ''}
-      <div class="mb-3">
-        <h6>예정된 예약</h6>
-        ${reservations.length > 0 ? `
-          <div class="list-group">
-            ${reservations.slice(0, 5).map(r => `
-              <div class="list-group-item">
-                <div class="d-flex justify-content-between">
-                  <strong>${r.username}</strong>
-                  <small class="text-muted">${formatDate(r.start_time)} ~ ${formatDate(r.end_time)}</small>
-                </div>
-                ${r.purpose ? `<small class="text-muted">${r.purpose}</small>` : ''}
+          ${equipment.location ? `
+            <div class="mb-3">
+              <h6>위치</h6>
+              <p><i class="bi bi-geo-alt"></i> ${equipment.location}</p>
+            </div>
+          ` : ''}
+          ${equipment.description ? `
+            <div class="mb-3">
+              <h6>설명</h6>
+              <p>${equipment.description}</p>
+            </div>
+          ` : ''}
+          ${(equipment.brochure_url || equipment.manual_url || equipment.quick_guide_url) ? `
+            <div class="mb-3">
+              <h6><i class="bi bi-file-earmark-pdf"></i> 관련 문서</h6>
+              <div class="list-group list-group-flush">
+                ${equipment.brochure_url ? `
+                  <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action">
+                    <i class="bi bi-download"></i> 장비 소개 자료
+                  </a>
+                ` : ''}
+                ${equipment.manual_url ? `
+                  <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action">
+                    <i class="bi bi-download"></i> 매뉴얼
+                  </a>
+                ` : ''}
+                ${equipment.quick_guide_url ? `
+                  <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action">
+                    <i class="bi bi-download"></i> 간단 매뉴얼
+                  </a>
+                ` : ''}
               </div>
-            `).join('')}
+            </div>
+          ` : ''}
+        </div>
+        <div class="col-md-5">
+          <!-- Equipment Logs/Remarks -->
+          <div class="card mb-3">
+            <div class="card-header py-2">
+              <h6 class="mb-0"><i class="bi bi-journal-text"></i> 장비 이력</h6>
+            </div>
+            <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;">
+              ${logs.length > 0 ? `
+                <div class="list-group list-group-flush">
+                  ${logs.map(log => `
+                    <div class="list-group-item p-2">
+                      <div class="d-flex justify-content-between">
+                        <small class="fw-bold">${log.username || '시스템'}</small>
+                        <small class="text-muted">${new Date(log.created_at).toLocaleDateString('ko-KR')}</small>
+                      </div>
+                      <small>${log.content}</small>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : '<p class="text-muted small mb-0">이력 없음</p>'}
+            </div>
+            ${isAuthenticated() ? `
+              <div class="card-footer p-2">
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control" id="newLogContent" placeholder="사용 후기 또는 상태 메모">
+                  <button class="btn btn-outline-primary" type="button" id="addLogBtn">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+              </div>
+            ` : ''}
           </div>
-        ` : '<p class="text-muted">예약 없음</p>'}
+          
+          <!-- Upcoming Reservations -->
+          <div class="mb-3">
+            <h6>예정된 예약</h6>
+            ${reservations.length > 0 ? `
+              <div class="list-group" style="max-height: 150px; overflow-y: auto;">
+                ${reservations.slice(0, 5).map(r => `
+                  <div class="list-group-item p-2">
+                    <div class="d-flex justify-content-between">
+                      <strong class="small">${r.username}</strong>
+                      <small class="text-muted">${formatDate(r.start_time)}</small>
+                    </div>
+                    ${r.purpose ? `<small class="text-muted">${r.purpose}</small>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<p class="text-muted small">예약 없음</p>'}
+          </div>
+        </div>
       </div>
       ${equipment.status === 'available' ? `
-        <button class="btn btn-primary w-100 mt-3">
+        <button class="btn btn-primary w-100 mt-3" id="reserveBtn">
           <i class="bi bi-calendar-plus"></i> 예약하기
         </button>
       ` : ''}
     `;
 
-    const resBtn = modalBody.querySelector('button');
+    // Add log button handler
+    const addLogBtn = modalBody.querySelector('#addLogBtn');
+    if (addLogBtn) {
+      addLogBtn.onclick = async () => {
+        const content = document.getElementById('newLogContent').value.trim();
+        if (!content) return;
+        try {
+          await apiRequest(`/equipment-logs/equipment/${equipmentId}`, {
+            method: 'POST',
+            body: JSON.stringify({ content, logType: 'usage_remark' })
+          });
+          showEquipmentDetails(equipmentId); // Refresh
+        } catch (e) {
+          alert('이력 등록 실패: ' + e.message);
+        }
+      };
+    }
+
+    const resBtn = modalBody.querySelector('#reserveBtn');
     if (resBtn) {
       resBtn.onclick = () => openReservationModal(equipment.id);
     }

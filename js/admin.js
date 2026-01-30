@@ -114,10 +114,13 @@ const loadEquipmentManagement = async () => {
             <td>${e.location || '-'}</td>
             <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
             <td>
-              <button class="btn btn-sm btn-outline-primary" onclick="editEquipment(${e.id})">
+              <button class="btn btn-sm btn-outline-primary" onclick="editEquipment(${e.id})" title="수정">
                 <i class="bi bi-pencil"></i>
               </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteEquipment(${e.id})">
+              <button class="btn btn-sm btn-outline-success" onclick="openPermissionModal(${e.id}, '${e.name}')" title="권한 관리">
+                <i class="bi bi-person-check"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="handleDeleteEquipment(${e.id})" title="삭제">
                 <i class="bi bi-trash"></i>
               </button>
             </td>
@@ -614,3 +617,122 @@ document.addEventListener('DOMContentLoaded', () => {
   loadReservationManagement();
   loadStatistics();
 });
+
+// ===== Permission Management Functions =====
+
+// Department label mapping
+const getDepartmentLabel = (dept) => {
+  const labels = {
+    'nano_display': '나노디스플레이연구실',
+    'nano_litho': '나노리소그래피연구센터',
+    'battery': '이차전지장비연구실'
+  };
+  return labels[dept] || dept || '-';
+};
+
+// User role label mapping
+const getUserRoleLabel = (role) => {
+  const labels = {
+    'intern': '인턴',
+    'student': '학생연구원',
+    'staff': '담당',
+    'equipment_manager': '장비담당자',
+    'admin': '관리자'
+  };
+  return labels[role] || role || '-';
+};
+
+// Open permission management modal
+const openPermissionModal = async (equipmentId, equipmentName) => {
+  document.getElementById('permissionEquipmentId').value = equipmentId;
+  document.getElementById('permissionEquipmentName').textContent = equipmentName;
+
+  // Load current permissions and candidates
+  await loadPermissions(equipmentId);
+  await loadPermissionCandidates(equipmentId);
+
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('permissionModal'));
+  modal.show();
+};
+
+// Load current permissions for equipment
+const loadPermissions = async (equipmentId) => {
+  const container = document.getElementById('permissionList');
+  try {
+    const permissions = await apiRequest(`/permissions/equipment/${equipmentId}`);
+
+    if (permissions.length === 0) {
+      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">권한자 없음</td></tr>';
+    } else {
+      container.innerHTML = permissions.map(p => `
+        <tr>
+          <td>${p.username}</td>
+          <td>${getDepartmentLabel(p.department)}</td>
+          <td>${getUserRoleLabel(p.user_role)}</td>
+          <td>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${equipmentId}, ${p.user_id})">
+              <i class="bi bi-x"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (error) {
+    container.innerHTML = `<tr><td colspan="5" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
+  }
+};
+
+// Load users without permission (for granting)
+const loadPermissionCandidates = async (equipmentId) => {
+  const select = document.getElementById('permissionUserSelect');
+  try {
+    const users = await apiRequest(`/permissions/equipment/${equipmentId}/candidates`);
+
+    select.innerHTML = '<option value="">사용자 선택...</option>' +
+      users.map(u => `<option value="${u.id}">${u.username} (${getDepartmentLabel(u.department)}, ${getUserRoleLabel(u.user_role)})</option>`).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">로드 실패</option>';
+  }
+};
+
+// Grant permission to user
+const grantPermission = async () => {
+  const equipmentId = document.getElementById('permissionEquipmentId').value;
+  const userId = document.getElementById('permissionUserSelect').value;
+
+  if (!userId) {
+    alert('사용자를 선택해주세요.');
+    return;
+  }
+
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/grant`, {
+      method: 'POST',
+      body: JSON.stringify({ userId: parseInt(userId) })
+    });
+
+    // Refresh lists
+    await loadPermissions(equipmentId);
+    await loadPermissionCandidates(equipmentId);
+  } catch (error) {
+    alert('권한 부여 실패: ' + error.message);
+  }
+};
+
+// Revoke permission from user
+const revokePermission = async (equipmentId, userId) => {
+  if (!confirm('이 사용자의 권한을 취소하시겠습니까?')) return;
+
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/revoke/${userId}`, {
+      method: 'DELETE'
+    });
+
+    // Refresh lists
+    await loadPermissions(equipmentId);
+    await loadPermissionCandidates(equipmentId);
+  } catch (error) {
+    alert('권한 취소 실패: ' + error.message);
+  }
+};
