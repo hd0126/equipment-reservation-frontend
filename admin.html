@@ -365,7 +365,10 @@
                 </div>
 
                 <div class="mb-3">
-                  <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="equipmentImageFile" class="form-label mb-0">또는 이미지 파일 업로드</label>
+                    <span id="currentImageFile"></span>
+                  </div>
                   <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
                   <small class="text-muted">파일 선택 시 URL보다 우선 적용됩니다</small>
                 </div>
