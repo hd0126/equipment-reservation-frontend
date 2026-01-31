@@ -521,13 +521,14 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('[DEBUG] Final newImageFileUrl:', newImageFileUrl);
 
           // Build update data
+          // 파일 업로드 URL이 있으면 image_url에 저장, 없으면 직접 입력한 URL 사용
+          const finalImageUrl = newImageFileUrl || imageUrl || existingEquipment.image_url;
           const data = {
             name,
             description,
             location,
             status,
-            image_url: imageUrl, // 직접 입력 URL (사용자가 입력한 그대로 보존)
-            image_file_url: newImageFileUrl, // R2 업로드 URL
+            image_url: finalImageUrl,
             brochure_url: existingEquipment.brochure_url,
             manual_url: existingEquipment.manual_url,
             quick_guide_url: existingEquipment.quick_guide_url
@@ -582,13 +583,14 @@ document.addEventListener('DOMContentLoaded', () => {
             newImageFileUrl = uploadResult.url;
           }
 
+          // 파일 업로드 URL이 있으면 image_url에 저장, 없으면 직접 입력한 URL 사용
+          const finalImageUrl = newImageFileUrl || imageUrl;
           const data = {
             name,
             description,
             location,
             status,
-            image_url: imageUrl, // 직접 입력 URL
-            image_file_url: newImageFileUrl // R2 업로드 URL
+            image_url: finalImageUrl
           };
           const result = await createEquipment(data);
           savedEquipmentId = result.equipmentId;
