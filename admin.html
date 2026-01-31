@@ -278,10 +278,23 @@
         <div class="tab-content border border-top-0 p-3" id="reservationTabContent">
           <!-- List Pane -->
           <div class="tab-pane fade show active" id="listPane" role="tabpanel">
+            <!-- Bulk Actions -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <button class="btn btn-danger btn-sm" onclick="bulkDeleteReservations()" id="bulkDeleteBtn" disabled>
+                  <i class="bi bi-trash"></i> 선택 삭제 (<span id="selectedCount">0</span>)
+                </button>
+              </div>
+              <small class="text-muted">체크박스로 여러 예약을 선택 후 일괄 삭제</small>
+            </div>
             <div class="table-responsive">
               <table class="table table-hover">
                 <thead class="text-center">
                   <tr>
+                    <th class="text-center" style="width: 40px;">
+                      <input type="checkbox" class="form-check-input" id="selectAllReservations"
+                        onclick="toggleSelectAll(this)">
+                    </th>
                     <th class="text-center">ID</th>
                     <th class="text-center">장비</th>
                     <th class="text-center">사용자</th>
@@ -293,7 +306,7 @@
                 </thead>
                 <tbody id="reservationManagementTable">
                   <tr>
-                    <td colspan="7" class="text-center">
+                    <td colspan="8" class="text-center">
                       <div class="spinner-border text-primary"></div>
                     </td>
                   </tr>

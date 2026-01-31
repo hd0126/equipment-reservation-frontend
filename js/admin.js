@@ -657,7 +657,7 @@ const renderReservationTable = (reservations) => {
   if (reservations.length === 0) {
     container.innerHTML = `
       <tr>
-        <td colspan="7" class="text-center text-muted">예약 내역이 없습니다</td>
+        <td colspan="8" class="text-center text-muted">예약 내역이 없습니다</td>
       </tr>
     `;
   } else {
@@ -671,6 +671,9 @@ const renderReservationTable = (reservations) => {
 
       return `
         <tr>
+          <td class="text-center align-middle">
+            <input type="checkbox" class="form-check-input reservation-checkbox" value="${r.id}" onchange="updateBulkDeleteButton()">
+          </td>
           <td class="text-center align-middle">${r.id}</td>
           <td class="text-center align-middle">${r.equipment_name}</td>
           <td class="text-center align-middle">${r.username || r.user_name}</td>
@@ -694,6 +697,75 @@ const renderReservationTable = (reservations) => {
         </tr>
       `;
     }).join('');
+  }
+
+  // Reset select all checkbox
+  const selectAllCheckbox = document.getElementById('selectAllReservations');
+  if (selectAllCheckbox) selectAllCheckbox.checked = false;
+  updateBulkDeleteButton();
+};
+
+// Toggle select all checkboxes
+const toggleSelectAll = (checkbox) => {
+  const checkboxes = document.querySelectorAll('.reservation-checkbox');
+  checkboxes.forEach(cb => cb.checked = checkbox.checked);
+  updateBulkDeleteButton();
+};
+
+// Update bulk delete button state
+const updateBulkDeleteButton = () => {
+  const checkboxes = document.querySelectorAll('.reservation-checkbox:checked');
+  const btn = document.getElementById('bulkDeleteBtn');
+  const countSpan = document.getElementById('selectedCount');
+
+  if (btn) {
+    btn.disabled = checkboxes.length === 0;
+  }
+  if (countSpan) {
+    countSpan.textContent = checkboxes.length;
+  }
+};
+
+// Bulk delete reservations
+const bulkDeleteReservations = async () => {
+  const checkboxes = document.querySelectorAll('.reservation-checkbox:checked');
+  const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+  if (ids.length === 0) {
+    alert('삭제할 예약을 선택해주세요.');
+    return;
+  }
+
+  if (!confirm(`선택한 ${ids.length}개의 예약을 완전히 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`)) {
+    return;
+  }
+
+  try {
+    // Delete each reservation
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await apiRequest(`/reservations/${id}`, { method: 'DELETE' });
+        successCount++;
+      } catch (e) {
+        console.error(`Failed to delete reservation ${id}:`, e);
+        failCount++;
+      }
+    }
+
+    if (failCount > 0) {
+      alert(`${successCount}개 삭제 완료, ${failCount}개 실패`);
+    } else {
+      alert(`${successCount}개 예약이 삭제되었습니다.`);
+    }
+
+    // Reload reservations
+    loadReservationManagement();
+  } catch (error) {
+    console.error('Bulk delete failed:', error);
+    alert('일괄 삭제 중 오류가 발생했습니다.');
   }
 };
 
