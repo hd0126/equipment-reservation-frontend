@@ -341,14 +341,23 @@ const renderDepartmentStats = (stats) => {
     return;
   }
 
+  // Department label mapping (English -> Korean)
+  const deptLabels = {
+    'nano_display': '나노디스플레이연구실',
+    'nano_litho': '나노리소그래피연구센터',
+    'battery': '이차전지장비연구실'
+  };
+  const getDeptLabel = (dept) => deptLabels[dept] || dept || '미지정';
+
   // Group by department from user stats
   const deptMap = new Map();
   stats.userStats.forEach(user => {
-    const dept = user.department || '미지정';
-    if (!deptMap.has(dept)) {
-      deptMap.set(dept, 0);
+    const deptKey = user.department || '미지정';
+    const deptName = getDeptLabel(deptKey);
+    if (!deptMap.has(deptName)) {
+      deptMap.set(deptName, 0);
     }
-    deptMap.set(dept, deptMap.get(dept) + parseFloat(user.total_hours || 0));
+    deptMap.set(deptName, deptMap.get(deptName) + parseFloat(user.total_hours || 0));
   });
 
   const deptStats = Array.from(deptMap.entries())
