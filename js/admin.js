@@ -418,9 +418,67 @@ document.addEventListener('DOMContentLoaded', () => {
         let savedEquipmentId = equipmentId;
 
         if (equipmentId) {
-          // Update existing equipment
-          const data = { name, description, location, status, image_url: imageUrl };
-          await updateEquipment(equipmentId, data);
+          // Update existing equipment - preserve existing document URLs and image
+          const existingEquipment = await getEquipmentById(equipmentId);
+
+          // Determine final image URL
+          let finalImageUrl = imageUrl; // URL input takes priority
+          if (imageFile) {
+            // If new file uploaded, upload it
+            const imageFormData = new FormData();
+            imageFormData.append('image', imageFile);
+            imageFormData.append('name', name);
+            imageFormData.append('description', description);
+            imageFormData.append('location', location);
+            imageFormData.append('status', status);
+
+            const result = await apiRequest(`/equipment/${equipmentId}`, {
+              method: 'PUT',
+              body: imageFormData,
+              headers: {}
+            });
+            finalImageUrl = result.image_url || existingEquipment.image_url;
+          }
+
+          // Build update data preserving existing values
+          const data = {
+            name,
+            description,
+            location,
+            status,
+            image_url: finalImageUrl || existingEquipment.image_url,
+            brochure_url: existingEquipment.brochure_url,
+            manual_url: existingEquipment.manual_url,
+            quick_guide_url: existingEquipment.quick_guide_url
+          };
+
+          if (!imageFile) {
+            await updateEquipment(equipmentId, data);
+          }
+
+          // Upload new document files if provided
+          let brochureUrl = null, manualUrl = null, quickGuideUrl = null;
+
+          if (brochureFile) {
+            brochureUrl = await uploadDocument(brochureFile, 'brochure', equipmentId);
+          }
+          if (manualFile) {
+            manualUrl = await uploadDocument(manualFile, 'manual', equipmentId);
+          }
+          if (quickGuideFile) {
+            quickGuideUrl = await uploadDocument(quickGuideFile, 'quick_guide', equipmentId);
+          }
+
+          // Update with new document URLs if any were uploaded
+          if (brochureUrl || manualUrl || quickGuideUrl) {
+            await updateEquipment(equipmentId, {
+              ...data,
+              brochure_url: brochureUrl || data.brochure_url,
+              manual_url: manualUrl || data.manual_url,
+              quick_guide_url: quickGuideUrl || data.quick_guide_url
+            });
+          }
+
         } else {
           // Create new equipment
           if (imageFile) {
@@ -435,35 +493,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await createEquipment(data);
             savedEquipmentId = result.id;
           }
-        }
 
-        // 문서 파일 업로드 (장비 저장 후)
-        if (savedEquipmentId) {
-          let brochureUrl = null, manualUrl = null, quickGuideUrl = null;
+          // 문서 파일 업로드 (새 장비 저장 후)
+          if (savedEquipmentId) {
+            let brochureUrl = null, manualUrl = null, quickGuideUrl = null;
 
-          if (brochureFile) {
-            brochureUrl = await uploadDocument(brochureFile, 'brochure', savedEquipmentId);
-          }
-          if (manualFile) {
-            manualUrl = await uploadDocument(manualFile, 'manual', savedEquipmentId);
-          }
-          if (quickGuideFile) {
-            quickGuideUrl = await uploadDocument(quickGuideFile, 'quick_guide', savedEquipmentId);
-          }
+            if (brochureFile) {
+              brochureUrl = await uploadDocument(brochureFile, 'brochure', savedEquipmentId);
+            }
+            if (manualFile) {
+              manualUrl = await uploadDocument(manualFile, 'manual', savedEquipmentId);
+            }
+            if (quickGuideFile) {
+              quickGuideUrl = await uploadDocument(quickGuideFile, 'quick_guide', savedEquipmentId);
+            }
 
-          // 문서 URL이 있으면 장비 업데이트
-          if (brochureUrl || manualUrl || quickGuideUrl) {
-            const existingEquipment = await getEquipmentById(savedEquipmentId);
-            await updateEquipment(savedEquipmentId, {
-              name: existingEquipment.name,
-              description: existingEquipment.description,
-              location: existingEquipment.location,
-              status: existingEquipment.status,
-              image_url: existingEquipment.image_url,
-              brochure_url: brochureUrl || existingEquipment.brochure_url,
-              manual_url: manualUrl || existingEquipment.manual_url,
-              quick_guide_url: quickGuideUrl || existingEquipment.quick_guide_url
-            });
+            // 문서 URL이 있으면 장비 업데이트
+            if (brochureUrl || manualUrl || quickGuideUrl) {
+              const existingEquipment = await getEquipmentById(savedEquipmentId);
+              await updateEquipment(savedEquipmentId, {
+                name: existingEquipment.name,
+                description: existingEquipment.description,
+                location: existingEquipment.location,
+                status: existingEquipment.status,
+                image_url: existingEquipment.image_url,
+                brochure_url: brochureUrl || existingEquipment.brochure_url,
+                manual_url: manualUrl || existingEquipment.manual_url,
+                quick_guide_url: quickGuideUrl || existingEquipment.quick_guide_url
+              });
+            }
           }
         }
 
