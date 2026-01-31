@@ -157,6 +157,18 @@ const loadEquipmentManagement = async () => {
       </tr>
     `;
   }
+
+  // 위치 목록 datalist 채우기
+  try {
+    const equipment = await getEquipment();
+    const locations = [...new Set(equipment.map(e => e.location).filter(Boolean))];
+    const datalist = document.getElementById('locationList');
+    if (datalist) {
+      datalist.innerHTML = locations.map(loc => `<option value="${loc}">`).join('');
+    }
+  } catch (e) {
+    console.log('Location list load error:', e);
+  }
 };
 
 
@@ -263,12 +275,17 @@ window.editEquipment = async (id) => {
 
     if (displayImage && previewContainer && previewImg) {
       previewImg.src = displayImage;
-      previewContainer.style.display = 'block';
+      previewImg.style.display = 'block';
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+      if (placeholder) placeholder.style.display = 'none';
       previewImg.onerror = () => {
-        previewContainer.style.display = 'none';
+        previewImg.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
       };
     } else if (previewContainer) {
-      previewContainer.style.display = 'none';
+      previewImg.style.display = 'none';
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+      if (placeholder) placeholder.style.display = 'block';
     }
 
     // 문서 조회/삭제 버튼 렌더링 함수
@@ -885,25 +902,25 @@ const loadPermissions = async (equipmentId) => {
     if (countBadge) countBadge.textContent = `${permissions.length}명`;
 
     if (permissions.length === 0) {
-      container.innerHTML = '<tr><td colspan="6" class="text-center text-muted">권한자 없음</td></tr>';
+      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">권한자 없음</td></tr>';
     } else {
       container.innerHTML = permissions.map(p => `
         <tr>
-          <td>${p.username}</td>
-          <td>${getDepartmentLabel(p.department)}</td>
-          <td>
-            <select class="form-select form-select-sm" style="width: 100px;" 
+          <td class="text-center align-middle">${p.username}</td>
+          <td class="text-center align-middle">${getDepartmentLabel(p.department)}</td>
+          <td class="text-center align-middle">
+            <select class="form-select form-select-sm mx-auto" style="width: 100px;" 
                     onchange="updatePermissionLevel(${equipmentId}, ${p.user_id}, this.value)">
               <option value="normal" ${p.permission_level === 'normal' ? 'selected' : ''}>일반</option>
               <option value="autonomous" ${p.permission_level === 'autonomous' ? 'selected' : ''}>자율</option>
               <option value="manager" ${p.permission_level === 'manager' ? 'selected' : ''}>장비담당</option>
             </select>
           </td>
-          <td>
+          <td class="text-center align-middle">
             <small>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</small>
             ${p.updated_at ? `<br><small class="text-primary">변경: ${new Date(p.updated_at).toLocaleDateString('ko-KR')}</small>` : ''}
           </td>
-          <td>
+          <td class="text-center align-middle">
             <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${equipmentId}, ${p.user_id})">
               <i class="bi bi-x"></i>
             </button>

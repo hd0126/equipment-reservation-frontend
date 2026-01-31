@@ -333,7 +333,11 @@
 
                 <div class="mb-3">
                   <label for="equipmentLocation" class="form-label">위치</label>
-                  <input type="text" class="form-control" id="equipmentLocation">
+                  <input type="text" class="form-control" id="equipmentLocation" list="locationList"
+                    placeholder="위치 선택 또는 직접 입력">
+                  <datalist id="locationList">
+                    <!-- 기존 위치 목록이 동적으로 채워짐 -->
+                  </datalist>
                 </div>
 
                 <div class="mb-3">
@@ -352,16 +356,18 @@
 
               <!-- Right Column -->
               <div class="col-md-6">
-                <!-- 이미지 미리보기 -->
-                <div class="mb-3 text-center" id="imagePreviewContainer" style="display:none;">
+                <!-- 이미지 미리보기 (장비명, 위치와 동일 높이) -->
+                <div class="mb-3 text-center" id="imagePreviewContainer"
+                  style="min-height:120px; display:flex; align-items:center; justify-content:center; border:1px dashed #ddd; border-radius:8px; background:#f8f9fa;">
                   <img id="imagePreview" src="" alt="이미지 미리보기" class="img-thumbnail"
-                    style="max-height:150px; max-width:100%;">
+                    style="max-height:110px; max-width:100%; display:none;">
+                  <span id="imagePreviewPlaceholder" class="text-muted"><i class="bi bi-image"
+                      style="font-size:2rem;"></i><br>이미지 미리보기</span>
                 </div>
 
                 <div class="mb-3">
                   <label for="equipmentImageUrl" class="form-label">이미지 URL</label>
                   <input type="url" class="form-control" id="equipmentImageUrl" placeholder="https://...">
-                  <small class="text-muted">URL 입력 또는 아래에서 파일을 선택하세요</small>
                 </div>
 
                 <div class="mb-3">
@@ -370,7 +376,6 @@
                     <span id="currentImageFile"></span>
                   </div>
                   <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
-                  <small class="text-muted">파일 선택 시 URL보다 우선 적용됩니다</small>
                 </div>
 
                 <!-- 문서 업로드 섹션 -->
