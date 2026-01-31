@@ -116,7 +116,49 @@ const openCalendarReservationModal = (equipment, info) => {
       durationSelect.value = nearest.toString();
     }
   } else {
-    // Default for month view (no specific time)
+    // Month view - set start time to next 30-minute interval from current time
+    const now = new Date();
+    const selectedDateStr = info.startStr.split('T')[0];
+    const selectedDate = new Date(selectedDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    let defaultHour, defaultMin;
+
+    if (selectedDate.getTime() === today.getTime()) {
+      // Today - calculate next 30-minute slot
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+
+      if (currentMin < 30) {
+        defaultHour = currentHour;
+        defaultMin = 30;
+      } else {
+        defaultHour = currentHour + 1;
+        defaultMin = 0;
+      }
+
+      // Ensure within operating hours (08:00 - 22:00)
+      if (defaultHour < 8) {
+        defaultHour = 8;
+        defaultMin = 0;
+      } else if (defaultHour >= 22) {
+        defaultHour = 21;
+        defaultMin = 30;
+      }
+    } else if (selectedDate > today) {
+      // Future date - default to 08:00
+      defaultHour = 8;
+      defaultMin = 0;
+    } else {
+      // Past date - default to 08:00 (shouldn't normally happen)
+      defaultHour = 8;
+      defaultMin = 0;
+    }
+
+    const defaultTime = `${defaultHour.toString().padStart(2, '0')}:${defaultMin.toString().padStart(2, '0')}`;
+    timeSelect.value = defaultTime;
     durationSelect.value = '60'; // Default 1 hour
   }
 
