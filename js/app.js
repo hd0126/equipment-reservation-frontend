@@ -194,6 +194,40 @@ const showEquipmentDetails = async (equipmentId) => {
     const statusText = equipment.status === 'available' ? '사용 가능' : '점검 중';
 
     modalTitle.textContent = equipment.name;
+
+    // Filter only future reservations
+    const now = new Date();
+    const upcomingReservations = reservations.filter(r =>
+      new Date(r.start_time) > now && r.status !== 'cancelled'
+    ).slice(0, 10);
+
+    // Build related documents section (always show title)
+    const hasDocuments = equipment.brochure_url || equipment.manual_url || equipment.quick_guide_url;
+    const documentsSection = `
+      <div class="mb-3">
+        <h6><i class="bi bi-file-earmark-pdf"></i> 관련 문서</h6>
+        ${hasDocuments ? `
+          <div class="list-group list-group-flush">
+            ${equipment.brochure_url ? `
+              <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+                <i class="bi bi-download"></i> 장비 소개 자료
+              </a>
+            ` : ''}
+            ${equipment.manual_url ? `
+              <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+                <i class="bi bi-download"></i> 매뉴얼
+              </a>
+            ` : ''}
+            ${equipment.quick_guide_url ? `
+              <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+                <i class="bi bi-download"></i> 간단 매뉴얼
+              </a>
+            ` : ''}
+          </div>
+        ` : '<p class="text-muted small mb-0">등록된 문서가 없습니다</p>'}
+      </div>
+    `;
+
     modalBody.innerHTML = `
       <div class="row">
         <div class="col-md-7">
@@ -214,28 +248,7 @@ const showEquipmentDetails = async (equipmentId) => {
               <p>${equipment.description}</p>
             </div>
           ` : ''}
-          ${(equipment.brochure_url || equipment.manual_url || equipment.quick_guide_url) ? `
-            <div class="mb-3">
-              <h6><i class="bi bi-file-earmark-pdf"></i> 관련 문서</h6>
-              <div class="list-group list-group-flush">
-                ${equipment.brochure_url ? `
-                  <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action">
-                    <i class="bi bi-download"></i> 장비 소개 자료
-                  </a>
-                ` : ''}
-                ${equipment.manual_url ? `
-                  <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action">
-                    <i class="bi bi-download"></i> 매뉴얼
-                  </a>
-                ` : ''}
-                ${equipment.quick_guide_url ? `
-                  <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action">
-                    <i class="bi bi-download"></i> 간단 매뉴얼
-                  </a>
-                ` : ''}
-              </div>
-            </div>
-          ` : ''}
+          ${documentsSection}
         </div>
         <div class="col-md-5">
           <!-- Equipment Logs/Remarks -->
@@ -243,7 +256,7 @@ const showEquipmentDetails = async (equipmentId) => {
             <div class="card-header py-2">
               <h6 class="mb-0"><i class="bi bi-journal-text"></i> 장비 이력</h6>
             </div>
-            <div class="card-body p-2" style="max-height: 160px; overflow-y: auto;">
+            <div class="card-body p-2" style="height: 150px; overflow-y: auto;">
               ${logs.length > 0 ? `
                 <div class="list-group list-group-flush">
                   ${logs.map(log => {
@@ -292,10 +305,10 @@ const showEquipmentDetails = async (equipmentId) => {
             <div class="card-header py-2">
               <h6 class="mb-0"><i class="bi bi-calendar-check"></i> 예정된 예약</h6>
             </div>
-            <div class="card-body p-2" style="max-height: 180px; overflow-y: auto;">
-            ${reservations.length > 0 ? `
+            <div class="card-body p-2" style="height: 180px; overflow-y: auto;">
+            ${upcomingReservations.length > 0 ? `
               <div class="list-group list-group-flush">
-                ${reservations.slice(0, 5).map(r => `
+                ${upcomingReservations.map(r => `
                   <div class="list-group-item p-2">
                     <div class="d-flex justify-content-between">
                       <strong class="small">${r.username}</strong>
