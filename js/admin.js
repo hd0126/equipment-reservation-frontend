@@ -441,6 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
     imageFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
+        // 파일 선택 시 URL 필드 비우기
+        if (imageUrlInput) imageUrlInput.value = '';
+
         const reader = new FileReader();
         reader.onload = (event) => {
           previewImg.src = event.target.result;
