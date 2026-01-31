@@ -93,15 +93,20 @@ const renderEquipmentCard = (equipment) => {
   const defaultImage = 'https://via.placeholder.com/400x200?text=' + encodeURIComponent(equipment.name);
   const displayImage = equipment.image_file_url || equipment.image_url || defaultImage;
 
+  // Convert newlines to <br> for display
+  const descriptionHtml = equipment.description
+    ? equipment.description.replace(/\n/g, '<br>')
+    : '설명 없음';
+
   return `
     <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card equipment-card h-100">
-        <div class="cursor-pointer" onclick="showEquipmentDetails(${equipment.id})">
-          <img src="${displayImage}" class="card-img-top" alt="${equipment.name}">
-          <div class="card-body">
+      <div class="card equipment-card h-100 d-flex flex-column">
+        <div class="cursor-pointer flex-grow-1 d-flex flex-column" onclick="showEquipmentDetails(${equipment.id})">
+          <img src="${displayImage}" class="card-img-top" alt="${equipment.name}" style="height: 180px; object-fit: cover;">
+          <div class="card-body d-flex flex-column">
             <h5 class="card-title">${equipment.name}</h5>
-            <p class="card-text text-muted">${equipment.description || '설명 없음'}</p>
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="card-text text-muted mb-2" style="height: 60px; overflow-y: auto; line-height: 1.4;">${descriptionHtml}</div>
+            <div class="d-flex justify-content-between align-items-center mt-auto">
               <span class="equipment-status ${statusClass}">${statusText}</span>
               ${equipment.location ? `<small class="text-muted"><i class="bi bi-geo-alt"></i> ${equipment.location}</small>` : ''}
             </div>
@@ -245,7 +250,7 @@ const showEquipmentDetails = async (equipmentId) => {
           ${equipment.description ? `
             <div class="mb-3">
               <h6>설명</h6>
-              <p>${equipment.description}</p>
+              <p style="white-space: pre-line;">${equipment.description}</p>
             </div>
           ` : ''}
           ${documentsSection}
