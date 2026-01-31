@@ -105,6 +105,16 @@ body {
   color: #842029;
 }
 
+.status-info {
+  background-color: #cff4fc;
+  color: #055160;
+}
+
+.status-primary {
+  background-color: #cfe2ff;
+  color: #084298;
+}
+
 /* Forms */
 .form-label {
   font-weight: 500;

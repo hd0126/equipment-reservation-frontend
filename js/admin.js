@@ -126,11 +126,11 @@ const loadEquipmentManagement = async () => {
             <td class="text-center align-middle">${e.location || '-'}</td>
             <td class="text-center align-middle">
               ${e.manager_name
-            ? e.manager_name.split(', ').map(name => `<span class="badge bg-info">${name}</span>`).join('<br>')
+            ? e.manager_name.split(', ').map(name => `<span class="equipment-status status-info">${name}</span>`).join('<br>')
             : '<span class="text-muted">-</span>'}
             </td>
             <td class="text-center align-middle">
-              <span class="badge bg-primary">
+              <span class="equipment-status status-primary">
                 ${permCount}명
               </span>
             </td>
