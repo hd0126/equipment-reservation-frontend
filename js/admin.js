@@ -255,7 +255,10 @@ window.editEquipment = async (id) => {
 
     // R2에 업로드된 이미지는 URL 필드에 표시하지 않음 (파일 업로드로 처리된 것)
     // 외부 URL만 URL 필드에 표시
-    const isR2Url = equipment.image_url && equipment.image_url.includes('r2.cloudflarestorage.com');
+    const isR2Url = equipment.image_url && (
+      equipment.image_url.includes('r2.dev') ||
+      equipment.image_url.includes('r2.cloudflarestorage.com')
+    );
     document.getElementById('equipmentImageUrl').value = isR2Url ? '' : (equipment.image_url || '');
 
     // 이미지 미리보기 표시
