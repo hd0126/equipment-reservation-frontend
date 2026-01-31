@@ -490,7 +490,11 @@ const renderReservationGrid = async (equipmentId, startOffset = 0) => {
     for (let i = 0; i < 3; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + startOffset + i);
-      dates.push(d.toISOString().split('T')[0]);
+      // Use local date format instead of toISOString (UTC)
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
     }
 
     const reservations = await getEquipmentReservations(equipmentId);
@@ -604,13 +608,85 @@ data-index="${slotIdx}"
 data-label="${time.split(':')[1] === '00' ? '정' : '30'}"
 onmousedown="handleSlotMouseDown(this)"
 onmouseover="handleSlotMouseOver(this)"
-onmouseup="handleSlotMouseUp(this)">
+onmouseup="handleSlotMouseUp(this)"
+ontouchstart="handleSlotTouchStart(event, this)"
+ontouchend="handleSlotTouchEnd(event, this)">
       </div>`;
   }
 };
 
+// Mobile touch support - tap to select start, tap again to select end
+let touchStartSlot = null;
+let isTouchMode = false;
+
+window.handleSlotTouchStart = (event, el) => {
+  event.preventDefault();
+
+  if (!touchStartSlot) {
+    // First tap - select start
+    touchStartSlot = el;
+    dragStartDate = el.dataset.date;
+    dragStartIndex = parseInt(el.dataset.index);
+
+    clearSelectionStyles();
+    el.classList.add('selecting', 'selected-start', 'selected-end');
+    updateReservationForm(dragStartDate, el.dataset.time, 30);
+    isTouchMode = true;
+  } else if (el.dataset.date === dragStartDate) {
+    // Second tap - select end (same date only)
+    const currentIndex = parseInt(el.dataset.index);
+    const start = Math.min(dragStartIndex, currentIndex);
+    const end = Math.max(dragStartIndex, currentIndex);
+
+    // Check for conflicts
+    let hasConflict = false;
+    for (let i = start; i <= end; i++) {
+      const target = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${i}"]`);
+      if (!target || target.classList.contains('reserved')) {
+        hasConflict = true;
+        break;
+      }
+    }
+
+    if (!hasConflict) {
+      clearSelectionStyles();
+      for (let i = start; i <= end; i++) {
+        const target = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${i}"]`);
+        if (target) {
+          target.classList.add('selecting');
+          if (i === start) target.classList.add('selected-start');
+          if (i === end) target.classList.add('selected-end');
+        }
+      }
+
+      const startSlot = document.querySelector(`.grid-slot[data-date="${dragStartDate}"][data-index="${start}"]`);
+      const startTime = startSlot.dataset.time;
+      const duration = (end - start + 1) * 30;
+      updateReservationForm(dragStartDate, startTime, duration);
+    }
+
+    // Reset for next selection
+    touchStartSlot = null;
+    isTouchMode = false;
+  } else {
+    // Different date - restart selection
+    touchStartSlot = el;
+    dragStartDate = el.dataset.date;
+    dragStartIndex = parseInt(el.dataset.index);
+
+    clearSelectionStyles();
+    el.classList.add('selecting', 'selected-start', 'selected-end');
+    updateReservationForm(dragStartDate, el.dataset.time, 30);
+  }
+};
+
+window.handleSlotTouchEnd = (event, el) => {
+  event.preventDefault();
+};
+
 // Drag Handlers
 window.handleSlotMouseDown = (el) => {
+  if (isTouchMode) return; // Skip if in touch mode
   isDragging = true;
   dragStartIndex = parseInt(el.dataset.index);
   dragStartDate = el.dataset.date;
@@ -685,6 +761,53 @@ const updateReservationForm = (date, startTime, duration) => {
 
   updateCalculatedTime();
 };
+
+// Update grid highlight when form changes
+const updateGridHighlightFromForm = () => {
+  const date = document.getElementById('reservationDate')?.value;
+  const startTime = document.getElementById('reservationStartTime')?.value;
+  const duration = parseInt(document.getElementById('reservationDuration')?.value || '60');
+
+  if (!date || !startTime) return;
+
+  clearSelectionStyles();
+
+  // Calculate start and end slot indices
+  const [hour, min] = startTime.split(':').map(Number);
+  const startSlotIndex = ((hour - 8) * 2) + (min === 30 ? 1 : 0);
+  const endSlotIndex = startSlotIndex + (duration / 30) - 1;
+
+  // Highlight slots
+  for (let i = startSlotIndex; i <= endSlotIndex; i++) {
+    const target = document.querySelector(`.grid-slot[data-date="${date}"][data-index="${i}"]`);
+    if (target && !target.classList.contains('reserved')) {
+      target.classList.add('selecting');
+      if (i === startSlotIndex) target.classList.add('selected-start');
+      if (i === endSlotIndex) target.classList.add('selected-end');
+    }
+  }
+};
+
+// Add event listeners for form changes
+document.addEventListener('DOMContentLoaded', () => {
+  const startTimeSelect = document.getElementById('reservationStartTime');
+  const durationSelect = document.getElementById('reservationDuration');
+  const dateInput = document.getElementById('reservationDate');
+
+  if (startTimeSelect) startTimeSelect.addEventListener('change', updateGridHighlightFromForm);
+  if (durationSelect) durationSelect.addEventListener('change', updateGridHighlightFromForm);
+  if (dateInput) dateInput.addEventListener('change', () => {
+    // When date changes, reload grid to show correct dates
+    if (currentGridEquipmentId) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(dateInput.value);
+      const diffDays = Math.floor((selectedDate - today) / (1000 * 60 * 60 * 24));
+      const newOffset = Math.max(0, Math.floor(diffDays / 3) * 3);
+      renderReservationGrid(currentGridEquipmentId, newOffset);
+    }
+  });
+});
 
 // Render filtered equipment
 const renderEquipmentList = () => {
