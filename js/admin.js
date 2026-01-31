@@ -308,7 +308,10 @@ window.editEquipment = async (id) => {
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
 
-    const modal = new bootstrap.Modal(document.getElementById('equipmentModal'));
+    // 파일 입력 필드 초기화 (수정 후 새로고침 시)
+    document.getElementById('equipmentImageFile').value = '';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('equipmentModal'));
     modal.show();
   } catch (error) {
     alert('장비 정보를 불러오는데 실패했습니다: ' + error.message);
@@ -636,8 +639,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert(equipmentId ? '장비가 수정되었습니다.' : '장비가 추가되었습니다.');
 
-        const modal = bootstrap.Modal.getInstance(document.getElementById('equipmentModal'));
-        modal.hide();
+        if (equipmentId) {
+          // 수정: 모달 유지하고 업데이트된 상태로 새로고침
+          await editEquipment(equipmentId);
+        } else {
+          // 생성: 모달 닫기
+          const modal = bootstrap.Modal.getInstance(document.getElementById('equipmentModal'));
+          modal.hide();
+        }
 
         loadEquipmentManagement();
         loadDashboardStats();
