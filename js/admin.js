@@ -855,8 +855,8 @@ window.setQuickPeriod = (period) => {
       end = new Date(now.getFullYear(), now.getMonth(), 0); // 이번달 0일 = 지난달 말일
       break;
     case 'last3Months':
-      // 최근 3개월: 3개월 전 1일 ~ 오늘
-      start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      // 최근 3개월: 3개월 전 1일 ~ 오늘 (2월이면 11월 1일부터)
+      start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       end = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // 오늘
       break;
     case 'thisYear':
