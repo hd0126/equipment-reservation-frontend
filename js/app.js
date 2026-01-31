@@ -257,11 +257,11 @@ const showEquipmentDetails = async (equipmentId) => {
         </div>
         <div class="col-md-5">
           <!-- Equipment Logs/Remarks -->
-          <div class="card mb-3">
+          <div class="card mb-2">
             <div class="card-header py-2">
               <h6 class="mb-0"><i class="bi bi-journal-text"></i> 장비 이력</h6>
             </div>
-            <div class="card-body p-2" style="height: 150px; overflow-y: auto;">
+            <div class="card-body p-2" style="height: 130px; overflow-y: auto;">
               ${logs.length > 0 ? `
                 <div class="list-group list-group-flush">
                   ${logs.map(log => {
@@ -310,20 +310,33 @@ const showEquipmentDetails = async (equipmentId) => {
             <div class="card-header py-2">
               <h6 class="mb-0"><i class="bi bi-calendar-check"></i> 예정된 예약</h6>
             </div>
-            <div class="card-body p-2" style="height: 180px; overflow-y: auto;">
+            <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
             ${upcomingReservations.length > 0 ? `
-              <div class="list-group list-group-flush">
-                ${upcomingReservations.map(r => `
-                  <div class="list-group-item p-2">
-                    <div class="d-flex justify-content-between">
-                      <strong class="small">${r.username}</strong>
-                      <small class="text-muted">${formatDate(r.start_time)}</small>
-                    </div>
-                    ${r.purpose ? `<small class="text-muted">${r.purpose}</small>` : ''}
-                  </div>
-                `).join('')}
-              </div>
-            ` : '<p class="text-muted small mb-0">예약 없음</p>'}
+              <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th class="py-1 px-2">날짜</th>
+                    <th class="py-1 px-2">시간</th>
+                    <th class="py-1 px-2">예약자</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${upcomingReservations.map(r => {
+      const start = new Date(r.start_time);
+      const end = new Date(r.end_time);
+      const dateStr = start.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+      const timeStr = start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) +
+        '~' + end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `
+                    <tr title="${r.purpose || ''}">
+                      <td class="py-1 px-2">${dateStr}</td>
+                      <td class="py-1 px-2">${timeStr}</td>
+                      <td class="py-1 px-2"><strong>${r.username}</strong></td>
+                    </tr>
+                  `}).join('')}
+                </tbody>
+              </table>
+            ` : '<p class="text-muted small mb-0 p-2">예약 없음</p>'}
             </div>
           </div>
         </div>
