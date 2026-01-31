@@ -90,10 +90,34 @@ const openCalendarReservationModal = (equipment, info) => {
     }
   }
 
-  // If time was selected in week/day view, set it
-  if (info.startStr.includes('T')) {
-    const time = info.startStr.split('T')[1].substring(0, 5);
-    timeSelect.value = time;
+  // If time was selected in week/day view, set start time and calculate duration
+  const durationSelect = document.getElementById('calDuration');
+  if (info.startStr.includes('T') && info.endStr && info.endStr.includes('T')) {
+    // Set start time
+    const startTime = info.startStr.split('T')[1].substring(0, 5);
+    timeSelect.value = startTime;
+
+    // Calculate duration from dragged range
+    const startDate = new Date(info.start);
+    const endDate = new Date(info.end);
+    const durationMins = Math.round((endDate - startDate) / 60000);
+
+    // Set duration if it's a valid option (30, 60, 90, 120, 150, 180, 210, 240)
+    const validDurations = [30, 60, 90, 120, 150, 180, 210, 240];
+    if (validDurations.includes(durationMins)) {
+      durationSelect.value = durationMins.toString();
+    } else if (durationMins > 240) {
+      durationSelect.value = '240'; // Cap at 4 hours
+    } else {
+      // Round to nearest valid duration
+      const nearest = validDurations.reduce((prev, curr) =>
+        Math.abs(curr - durationMins) < Math.abs(prev - durationMins) ? curr : prev
+      );
+      durationSelect.value = nearest.toString();
+    }
+  } else {
+    // Default for month view (no specific time)
+    durationSelect.value = '60'; // Default 1 hour
   }
 
   // Reset purpose
