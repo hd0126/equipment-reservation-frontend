@@ -197,7 +197,7 @@
             <i class="bi bi-arrow-clockwise"></i> 새로고침
           </button>
           <button class="btn btn-success btn-sm" onclick="exportStatsToExcel()">
-            <i class="bi bi-file-earmark-spreadsheet"></i> 엑셀 다운로드
+            <i class="bi bi-file-earmark-spreadsheet"></i> 예약&통계 내보내기
           </button>
         </div>
       </div>
@@ -374,10 +374,10 @@
             </div>
 
             <!-- Cross Statistics -->
-            <div class="row">
+            <div class="row mb-4">
               <div class="col-12">
                 <h6><i class="bi bi-grid-3x3"></i> 장비-사용자 교차 통계 (상위 20건)</h6>
-                <div class="table-responsive" style="max-height: 350px;">
+                <div class="table-responsive" style="max-height: 300px;">
                   <table class="table table-sm table-bordered table-hover">
                     <thead class="sticky-top bg-light">
                       <tr>
@@ -393,6 +393,17 @@
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Equipment Top Users Visualization -->
+            <div class="row">
+              <div class="col-12">
+                <h6><i class="bi bi-trophy"></i> 장비별 상위 이용자 (Top 3)</h6>
+                <div class="d-flex flex-wrap gap-2" id="equipmentTopUsersContainer"
+                  style="max-height: 400px; overflow-y: auto;">
+                  <div class="text-muted small p-3">데이터 로딩 중...</div>
                 </div>
               </div>
             </div>

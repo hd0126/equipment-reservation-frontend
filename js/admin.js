@@ -137,6 +137,9 @@ const loadStatistics = async (startDate, endDate) => {
     // Render charts
     renderStatsCharts(stats);
 
+    // Render equipment top users
+    renderEquipmentTopUsers(stats);
+
   } catch (error) {
     console.error('Failed to load statistics:', error);
     const eqTable = document.getElementById('equipmentStatsTable');
@@ -145,6 +148,8 @@ const loadStatistics = async (startDate, endDate) => {
     if (uTable) uTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
     const cTable = document.getElementById('crossStatsTable');
     if (cTable) cTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패</td></tr>`;
+    const topContainer = document.getElementById('equipmentTopUsersContainer');
+    if (topContainer) topContainer.innerHTML = '<div class="text-danger small p-3">로드 실패</div>';
   }
 };
 
@@ -221,6 +226,87 @@ const renderStatsCharts = (stats) => {
       }
     });
   }
+};
+
+// Render equipment top users visualization (compact cards)
+const renderEquipmentTopUsers = (stats) => {
+  const container = document.getElementById('equipmentTopUsersContainer');
+  if (!container) return;
+
+  // Color palette for user bars
+  const colors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997'];
+
+  if (!stats.userEquipmentStats || stats.userEquipmentStats.length === 0) {
+    container.innerHTML = '<div class="text-muted small p-3">데이터 없음</div>';
+    return;
+  }
+
+  // Group by equipment and get top 3 users per equipment
+  const equipmentMap = new Map();
+  stats.userEquipmentStats.forEach(item => {
+    const eqName = item.equipment_name;
+    if (!equipmentMap.has(eqName)) {
+      equipmentMap.set(eqName, []);
+    }
+    equipmentMap.get(eqName).push({
+      username: item.username,
+      hours: parseFloat(item.total_hours || 0)
+    });
+  });
+
+  // Sort each equipment's users by hours and take top 3
+  const equipmentTopUsers = [];
+  equipmentMap.forEach((users, equipName) => {
+    users.sort((a, b) => b.hours - a.hours);
+    const top3 = users.slice(0, 3);
+    if (top3.length > 0 && top3[0].hours > 0) {
+      equipmentTopUsers.push({
+        name: equipName,
+        users: top3,
+        maxHours: top3[0].hours
+      });
+    }
+  });
+
+  // Sort equipment by total usage
+  equipmentTopUsers.sort((a, b) => b.maxHours - a.maxHours);
+
+  if (equipmentTopUsers.length === 0) {
+    container.innerHTML = '<div class="text-muted small p-3">사용 데이터 없음</div>';
+    return;
+  }
+
+  // Render compact cards
+  container.innerHTML = equipmentTopUsers.map(eq => {
+    const maxWidth = 100; // bar max width percentage
+    const userBars = eq.users.map((user, idx) => {
+      const barWidth = eq.maxHours > 0 ? (user.hours / eq.maxHours * maxWidth) : 0;
+      return `
+        <div class="d-flex align-items-center mb-1">
+          <span class="badge me-1" style="background-color: ${colors[idx % colors.length]}; width: 18px; font-size: 10px;">${idx + 1}</span>
+          <div class="flex-grow-1 me-2" style="min-width: 60px;">
+            <div class="small text-truncate" style="max-width: 80px;" title="${user.username}">${user.username}</div>
+          </div>
+          <div class="progress flex-grow-1" style="height: 12px; min-width: 50px;">
+            <div class="progress-bar" style="width: ${barWidth}%; background-color: ${colors[idx % colors.length]};" 
+                 title="${user.hours.toFixed(1)}h"></div>
+          </div>
+          <span class="ms-1 small text-muted" style="min-width: 35px;">${user.hours.toFixed(1)}h</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="card" style="width: 240px; flex-shrink: 0;">
+        <div class="card-header py-1 px-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <small class="text-white fw-bold text-truncate d-block" title="${eq.name}">${eq.name}</small>
+        </div>
+        <div class="card-body py-2 px-2">
+          ${userBars}
+        </div>
+      </div>
+    `;
+  }).join('');
 };
 
 // Load equipment management
@@ -1038,13 +1124,8 @@ window.filterReservations = () => {
   renderReservationTable(filtered);
 };
 
-// Excel export
+// Excel export (reservations + stats)
 window.exportStatsToExcel = () => {
-  if (!lastStatsData) {
-    alert('먼저 통계를 조회해주세요.');
-    return;
-  }
-
   if (typeof XLSX === 'undefined') {
     alert('엑셀 라이브러리가 로드되지 않았습니다.');
     return;
@@ -1052,8 +1133,24 @@ window.exportStatsToExcel = () => {
 
   const wb = XLSX.utils.book_new();
 
-  // Equipment stats sheet
-  if (lastStatsData.equipmentStats && lastStatsData.equipmentStats.length > 0) {
+  // 1. Reservation list sheet
+  if (allReservations && allReservations.length > 0) {
+    const statusLabels = { 'confirmed': '확정', 'pending': '대기', 'cancelled': '취소' };
+    const reservationData = allReservations.map(r => ({
+      'ID': r.id,
+      '장비': r.equipment_name || '',
+      '사용자': r.username || r.user_name || '',
+      '시작일시': r.start_time ? new Date(r.start_time).toLocaleString('ko-KR') : '',
+      '종료일시': r.end_time ? new Date(r.end_time).toLocaleString('ko-KR') : '',
+      '상태': statusLabels[r.status] || r.status,
+      '목적': r.purpose || ''
+    }));
+    const reservationSheet = XLSX.utils.json_to_sheet(reservationData);
+    XLSX.utils.book_append_sheet(wb, reservationSheet, '예약리스트');
+  }
+
+  // 2. Equipment stats sheet
+  if (lastStatsData && lastStatsData.equipmentStats && lastStatsData.equipmentStats.length > 0) {
     const eqData = lastStatsData.equipmentStats.map(eq => ({
       '장비명': eq.equipment_name,
       '총 예약': Number(eq.total_reservations || 0),
@@ -1062,11 +1159,11 @@ window.exportStatsToExcel = () => {
       '총 시간(h)': parseFloat(parseFloat(eq.total_hours || 0).toFixed(1))
     }));
     const eqSheet = XLSX.utils.json_to_sheet(eqData);
-    XLSX.utils.book_append_sheet(wb, eqSheet, '장비별 통계');
+    XLSX.utils.book_append_sheet(wb, eqSheet, '장비별통계');
   }
 
-  // User stats sheet
-  if (lastStatsData.userStats && lastStatsData.userStats.length > 0) {
+  // 3. User stats sheet
+  if (lastStatsData && lastStatsData.userStats && lastStatsData.userStats.length > 0) {
     const userData = lastStatsData.userStats.map(user => ({
       '사용자': user.username,
       '이메일': user.email,
@@ -1076,7 +1173,25 @@ window.exportStatsToExcel = () => {
       '총 시간(h)': parseFloat(parseFloat(user.total_hours || 0).toFixed(1))
     }));
     const userSheet = XLSX.utils.json_to_sheet(userData);
-    XLSX.utils.book_append_sheet(wb, userSheet, '사용자별 통계');
+    XLSX.utils.book_append_sheet(wb, userSheet, '사용자별통계');
+  }
+
+  // 4. Cross stats sheet
+  if (lastStatsData && lastStatsData.userEquipmentStats && lastStatsData.userEquipmentStats.length > 0) {
+    const crossData = lastStatsData.userEquipmentStats.map(item => ({
+      '사용자': item.username,
+      '장비': item.equipment_name,
+      '예약횟수': Number(item.reservation_count || 0),
+      '총 시간(h)': parseFloat(parseFloat(item.total_hours || 0).toFixed(1))
+    }));
+    const crossSheet = XLSX.utils.json_to_sheet(crossData);
+    XLSX.utils.book_append_sheet(wb, crossSheet, '교차통계');
+  }
+
+  // Check if any data exists
+  if (wb.SheetNames.length === 0) {
+    alert('내보낼 데이터가 없습니다.');
+    return;
   }
 
   // Generate filename with date
@@ -1086,9 +1201,9 @@ window.exportStatsToExcel = () => {
   const endDate = document.getElementById('reservationEndFilter')?.value;
   let fileName;
   if (startDate && endDate) {
-    fileName = `장비예약통계_${startDate}_${endDate}.xlsx`;
+    fileName = `예약통계_${startDate}_${endDate}.xlsx`;
   } else {
-    fileName = `장비예약통계_${dateStr}.xlsx`;
+    fileName = `예약통계_${dateStr}.xlsx`;
   }
 
   XLSX.writeFile(wb, fileName);
