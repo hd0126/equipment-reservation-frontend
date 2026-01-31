@@ -383,22 +383,8 @@ const deleteDocument = async (equipmentId, type, fileUrl) => {
 window.handleDeleteDocument = async (equipmentId, type, fileUrl) => {
   const deleted = await deleteDocument(equipmentId, type, fileUrl);
   if (deleted) {
-    // 삭제 후 UI 업데이트
-    const elementId = {
-      'brochure': 'currentBrochure',
-      'manual': 'currentManual',
-      'quick_guide': 'currentQuickGuide'
-    }[type];
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.innerHTML = '';
-    }
-    // 이미지인 경우 URL 입력 필드와 미리보기도 처리
-    if (type === 'image') {
-      document.getElementById('equipmentImageUrl').value = '';
-      const previewContainer = document.getElementById('imagePreviewContainer');
-      if (previewContainer) previewContainer.style.display = 'none';
-    }
+    // 삭제 후 모달 새로고침으로 UI 업데이트
+    await editEquipment(equipmentId);
   }
 };
 
