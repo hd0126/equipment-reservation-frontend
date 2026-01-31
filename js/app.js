@@ -616,7 +616,7 @@ const renderSlot = (date, time, slotIdx, confirmedReservations, isOddRow) => {
 data-date="${date}"
 data-time="${time}"
 data-index="${slotIdx}"
-data-label="${time.split(':')[1] === '00' ? '정' : '30'}"
+data-label="${time.split(':')[1] === '00' ? '00' : '60'}"
 onmousedown="handleSlotMouseDown(this)"
 onmouseover="handleSlotMouseOver(this)"
 onmouseup="handleSlotMouseUp(this)"
