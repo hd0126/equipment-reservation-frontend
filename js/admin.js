@@ -1,5 +1,24 @@
 // Admin page functions
 
+// Check if current user is equipment manager (not admin)
+let isEquipmentManager = false;
+let managedEquipmentIds = [];
+
+// Initialize equipment manager status
+const initManagerStatus = async () => {
+  const user = getCurrentUser();
+  if (user && user.user_role !== 'admin') {
+    try {
+      const data = await apiRequest('/permissions/summary/manager');
+      if (data.managedEquipmentIds && data.managedEquipmentIds.length > 0) {
+        isEquipmentManager = true;
+        managedEquipmentIds = data.managedEquipmentIds;
+      }
+    } catch (e) {
+      isEquipmentManager = false;
+    }
+  }
+};
 // Load dashboard stats
 const loadDashboardStats = async () => {
   try {
@@ -94,10 +113,21 @@ const loadEquipmentManagement = async () => {
   showLoading(container);
 
   try {
-    const [equipment, permissionData] = await Promise.all([
-      getEquipment(),
-      apiRequest('/permissions/summary').catch(() => ({ equipmentSummary: [] }))
-    ]);
+    let equipment, permissionData;
+    const user = getCurrentUser();
+
+    // 장비담당자이면 제한된 데이터만 로드
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      permissionData = await apiRequest('/permissions/summary/manager');
+      equipment = await getEquipment();
+      // 관리하는 장비만 필터
+      equipment = equipment.filter(e => managedEquipmentIds.includes(e.id));
+    } else {
+      [equipment, permissionData] = await Promise.all([
+        getEquipment(),
+        apiRequest('/permissions/summary').catch(() => ({ equipmentSummary: [] }))
+      ]);
+    }
 
     // Create permission count map
     const permissionCountMap = {};
@@ -135,7 +165,7 @@ const loadEquipmentManagement = async () => {
               </span>
             </td>
             <td class="text-center align-middle"><span class="equipment-status ${statusClass}">${statusText}</span></td>
-            <td class="text-center align-middle">
+            <td class="text-center align-middle text-nowrap">
               <button class="btn btn-sm btn-outline-primary" onclick="editEquipment(${e.id})" title="수정">
                 <i class="bi bi-pencil"></i>
               </button>
@@ -178,58 +208,80 @@ const loadReservationManagement = async () => {
   showLoading(container);
 
   try {
-    const reservations = await getReservations();
+    const user = getCurrentUser();
+    let reservations;
+
+    // 장비담당자이면 제한된 데이터만 로드
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      reservations = await apiRequest('/reservations/manager');
+    } else {
+      reservations = await getReservations();
+    }
 
     // Sort by start time descending
     reservations.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
 
-    if (reservations.length === 0) {
-      container.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center text-muted">예약 내역이 없습니다</td>
-        </tr>
-      `;
-    } else {
-      container.innerHTML = reservations.slice(0, 20).map(r => {
-        const statusClass = `status-${r.status}`;
-        const statusText = {
-          'confirmed': '확정',
-          'pending': '대기',
-          'cancelled': '취소됨'
-        }[r.status];
+    // Store for filtering
+    allReservations = reservations;
 
-        return `
-          <tr>
-            <td>${r.id}</td>
-            <td>${r.equipment_name}</td>
-            <td>${r.username}</td>
-            <td><small>${formatDate(r.start_time)}</small></td>
-            <td><small>${formatDate(r.end_time)}</small></td>
-            <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
-            <td>
-              ${r.status === 'cancelled' ? `
-                <button class="btn btn-sm btn-outline-success" onclick="handleRestoreReservation(${r.id})" title="복구">
-                  <i class="bi bi-arrow-counterclockwise"></i>
-                </button>
-              ` : `
-                <button class="btn btn-sm btn-outline-danger" onclick="handleAdminCancelReservation(${r.id})" title="취소">
-                  <i class="bi bi-x-circle"></i>
-                </button>
-              `}
-              <button class="btn btn-sm btn-outline-danger" onclick="handleAdminDeleteReservation(${r.id})" title="삭제">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
+    // Populate filter dropdowns
+    await populateReservationFilters();
+
+    // Render table
+    renderReservationTable(reservations);
   } catch (error) {
     container.innerHTML = `
       <tr>
         <td colspan="7" class="text-center text-danger">예약 목록 로드 실패: ${error.message}</td>
       </tr>
     `;
+  }
+};
+
+// Render reservation table
+const renderReservationTable = (reservations) => {
+  const container = document.getElementById('reservationManagementTable');
+
+  if (reservations.length === 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center text-muted">예약 내역이 없습니다</td>
+      </tr>
+    `;
+  } else {
+    container.innerHTML = reservations.slice(0, 50).map(r => {
+      const statusClass = `status-${r.status}`;
+      const statusText = {
+        'confirmed': '확정',
+        'pending': '대기',
+        'cancelled': '취소됨'
+      }[r.status];
+
+      return `
+        <tr>
+          <td class="text-center align-middle">${r.id}</td>
+          <td class="text-center align-middle">${r.equipment_name}</td>
+          <td class="text-center align-middle">${r.username || r.user_name}</td>
+          <td class="text-center align-middle"><small>${formatDate(r.start_time)}</small></td>
+          <td class="text-center align-middle"><small>${formatDate(r.end_time)}</small></td>
+          <td class="text-center align-middle"><span class="equipment-status ${statusClass}">${statusText}</span></td>
+          <td class="text-center align-middle text-nowrap">
+            ${r.status === 'cancelled' ? `
+              <button class="btn btn-sm btn-outline-success" onclick="handleRestoreReservation(${r.id})" title="복구">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-outline-danger" onclick="handleAdminCancelReservation(${r.id})" title="취소">
+                <i class="bi bi-x-circle"></i>
+              </button>
+            `}
+            <button class="btn btn-sm btn-outline-danger" onclick="handleAdminDeleteReservation(${r.id})" title="삭제">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 };
 
@@ -1003,6 +1055,123 @@ const revokePermission = async (equipmentId, userId) => {
   }
 };
 
+// ===== Export Functions =====
+
+// Export equipment to Excel
+const exportEquipment = async () => {
+  try {
+    const equipment = await getEquipment();
+    if (equipment.length === 0) {
+      alert('내보낼 장비가 없습니다.');
+      return;
+    }
+
+    let csvContent = '\uFEFFID,장비명,위치,상태,설명\n';
+    equipment.forEach(e => {
+      const status = e.status === 'available' ? '사용가능' : (e.status === 'maintenance' ? '점검중' : '사용불가');
+      csvContent += `${e.id},"${e.name || ''}","${e.location || ''}","${status}","${(e.description || '').replace(/"/g, '""')}"\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `장비목록_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  } catch (error) {
+    alert('장비 내보내기 실패: ' + error.message);
+  }
+};
+
+// Export users to Excel
+const exportUsers = async () => {
+  try {
+    const data = await apiRequest('/permissions/summary');
+    const users = data.userSummary || [];
+    if (users.length === 0) {
+      alert('내보낼 사용자가 없습니다.');
+      return;
+    }
+
+    let csvContent = '\uFEFFID,사용자,소속,구분,연락처,가입일,활용장비수\n';
+    users.forEach(u => {
+      const dept = getDepartmentLabel(u.department);
+      const role = getUserRoleLabel(u.user_role);
+      const date = u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-';
+      csvContent += `${u.id},"${u.username}","${dept}","${role}","${u.phone || '-'}","${date}",${u.permission_count}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `사용자목록_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  } catch (error) {
+    alert('사용자 내보내기 실패: ' + error.message);
+  }
+};
+
+// ===== Reservation Filter Functions =====
+
+let allReservations = [];
+
+// Populate filter dropdowns
+const populateReservationFilters = async () => {
+  try {
+    const equipment = await getEquipment();
+    const equipmentFilter = document.getElementById('reservationEquipmentFilter');
+    if (equipmentFilter) {
+      equipmentFilter.innerHTML = '<option value="">전체 장비</option>' +
+        equipment.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    }
+
+    // Get unique users from reservations
+    const users = [...new Map(allReservations.map(r => [r.user_id, { id: r.user_id, name: r.user_name }])).values()];
+    const userFilter = document.getElementById('reservationUserFilter');
+    if (userFilter) {
+      userFilter.innerHTML = '<option value="">전체 이용자</option>' +
+        users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    }
+  } catch (error) {
+    console.error('Filter population error:', error);
+  }
+};
+
+// Filter reservations based on selected criteria
+const filterReservations = () => {
+  const equipmentId = document.getElementById('reservationEquipmentFilter')?.value;
+  const userId = document.getElementById('reservationUserFilter')?.value;
+  const startDate = document.getElementById('reservationStartFilter')?.value;
+  const endDate = document.getElementById('reservationEndFilter')?.value;
+
+  let filtered = [...allReservations];
+
+  if (equipmentId) {
+    filtered = filtered.filter(r => r.equipment_id == equipmentId);
+  }
+  if (userId) {
+    filtered = filtered.filter(r => r.user_id == userId);
+  }
+  if (startDate) {
+    filtered = filtered.filter(r => new Date(r.start_time) >= new Date(startDate));
+  }
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59);
+    filtered = filtered.filter(r => new Date(r.end_time) <= end);
+  }
+
+  renderReservationTable(filtered);
+};
+
+// Clear all reservation filters
+const clearReservationFilters = () => {
+  document.getElementById('reservationEquipmentFilter').value = '';
+  document.getElementById('reservationUserFilter').value = '';
+  document.getElementById('reservationStartFilter').value = '';
+  document.getElementById('reservationEndFilter').value = '';
+  renderReservationTable(allReservations);
+};
+
 // ===== Permission Summary Functions =====
 
 // Load user permission summary
@@ -1011,19 +1180,36 @@ const loadUserPermissionSummary = async () => {
   if (!container) return;
 
   try {
-    const data = await apiRequest('/permissions/summary');
-    const summary = data.userSummary || [];
-    if (summary.length === 0) {
-      container.innerHTML = '<tr><td colspan="6" class="text-center text-muted">사용자 없음</td></tr>';
+    const user = getCurrentUser();
+    let data;
+
+    // 장비담당자이면 제한된 데이터만 로드
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      data = await apiRequest('/permissions/summary/manager');
     } else {
-      container.innerHTML = summary.map(u => `
+      data = await apiRequest('/permissions/summary');
+    }
+
+    let summary = data.userSummary || [];
+
+    // ID 오름차순 정렬 (가입순)
+    summary = summary.sort((a, b) => a.id - b.id);
+
+    if (summary.length === 0) {
+      container.innerHTML = '<tr><td colspan="8" class="text-center text-muted">사용자 없음</td></tr>';
+    } else {
+      container.innerHTML = summary.map(u => {
+        const createdAt = u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-';
+        return `
         <tr>
-          <td>${u.id}</td>
-          <td><strong>${u.username}</strong></td>
-          <td>${getDepartmentLabel(u.department)}</td>
-          <td>${getUserRoleLabel(u.user_role)}</td>
-          <td><span class="badge bg-primary">${u.permission_count}</span></td>
-          <td>
+          <td class="text-center align-middle">${u.id}</td>
+          <td class="text-center align-middle"><strong>${u.username}</strong></td>
+          <td class="text-center align-middle">${getDepartmentLabel(u.department)}</td>
+          <td class="text-center align-middle">${getUserRoleLabel(u.user_role)}</td>
+          <td class="text-center align-middle">${u.phone || '-'}</td>
+          <td class="text-center align-middle">${createdAt}</td>
+          <td class="text-center align-middle"><span class="equipment-status status-primary">${u.permission_count}건</span></td>
+          <td class="text-center align-middle text-nowrap">
             <button class="btn btn-sm btn-outline-primary" onclick="editUser(${u.id})" title="수정">
               <i class="bi bi-pencil"></i>
             </button>
@@ -1035,10 +1221,10 @@ const loadUserPermissionSummary = async () => {
             </button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
   } catch (error) {
-    container.innerHTML = `<tr><td colspan="6" class="text-danger">로드 실패</td></tr>`;
+    container.innerHTML = `<tr><td colspan="8" class="text-danger">로드 실패</td></tr>`;
   }
 };
 
@@ -1089,28 +1275,47 @@ const loadUserPermissions = async (userId) => {
   const countBadge = document.getElementById('userPermissionCount');
 
   try {
-    const permissions = await apiRequest(`/permissions/user/${userId}`);
+    let permissions = await apiRequest(`/permissions/user/${userId}`);
+
+    // 장비담당자이면 관리하는 장비만 필터링
+    const user = getCurrentUser();
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      permissions = permissions.filter(p => managedEquipmentIds.includes(p.equipment_id));
+    }
 
     if (countBadge) countBadge.textContent = `${permissions.length}개`;
 
     if (permissions.length === 0) {
-      container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">권한 없음</td></tr>';
+      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">권한 없음</td></tr>';
     } else {
-      container.innerHTML = permissions.map(p => `
+      // 장비담당자는 장비담당 권한 옵션을 숨김 (관리자만 부여 가능)
+      const showManagerOption = user && user.user_role === 'admin';
+      container.innerHTML = permissions.map(p => {
+        const levelLabel = p.permission_level === 'manager' ? '장비담당' :
+          (p.permission_level === 'autonomous' ? '자율' : '일반');
+        return `
         <tr>
-          <td>${p.equipment_name}</td>
-          <td>${p.location || '-'}</td>
-          <td>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
-          <td>
+          <td class="text-center align-middle">${p.equipment_name}</td>
+          <td class="text-center align-middle">${p.location || '-'}</td>
+          <td class="text-center align-middle">
+            <select class="form-select form-select-sm mx-auto" style="width:90px;"
+                    onchange="updateUserPermissionLevel(${p.equipment_id}, ${userId}, this.value)">
+              <option value="normal" ${p.permission_level === 'normal' ? 'selected' : ''}>일반</option>
+              <option value="autonomous" ${p.permission_level === 'autonomous' ? 'selected' : ''}>자율</option>
+              ${showManagerOption ? `<option value="manager" ${p.permission_level === 'manager' ? 'selected' : ''}>장비담당</option>` : ''}
+            </select>
+          </td>
+          <td class="text-center align-middle">${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
+          <td class="text-center align-middle">
             <button class="btn btn-sm btn-outline-danger" onclick="revokeUserPermission(${p.equipment_id}, ${userId})">
               <i class="bi bi-x"></i>
             </button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
   } catch (error) {
-    container.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패</td></tr>`;
+    container.innerHTML = `<tr><td colspan="5" class="text-center text-danger">로드 실패</td></tr>`;
     if (countBadge) countBadge.textContent = '0개';
   }
 };
@@ -1120,7 +1325,17 @@ const loadUserEquipmentCandidates = async (userId) => {
   const select = document.getElementById('userEquipmentSelect');
   try {
     const permissions = await apiRequest(`/permissions/user/${userId}`);
-    const equipment = await getEquipment();
+    let equipment;
+
+    // 장비담당자이면 관리하는 장비만 로드
+    const user = getCurrentUser();
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      const allEquipment = await getEquipment();
+      equipment = allEquipment.filter(e => managedEquipmentIds.includes(e.id));
+    } else {
+      equipment = await getEquipment();
+    }
+
     const permittedIds = permissions.map(p => p.equipment_id);
     const candidates = equipment.filter(e => !permittedIds.includes(e.id));
 
@@ -1135,6 +1350,7 @@ const loadUserEquipmentCandidates = async (userId) => {
 const grantUserPermission = async () => {
   const userId = document.getElementById('userPermissionUserId').value;
   const equipmentId = document.getElementById('userEquipmentSelect').value;
+  const permissionLevel = document.getElementById('userPermissionLevel').value || 'normal';
 
   if (!equipmentId) {
     alert('장비를 선택해주세요.');
@@ -1144,7 +1360,7 @@ const grantUserPermission = async () => {
   try {
     await apiRequest(`/permissions/equipment/${equipmentId}/grant`, {
       method: 'POST',
-      body: JSON.stringify({ userId: parseInt(userId) })
+      body: JSON.stringify({ userId: parseInt(userId), permissionLevel })
     });
     await loadUserPermissions(userId);
     await loadUserEquipmentCandidates(userId);
@@ -1152,6 +1368,20 @@ const grantUserPermission = async () => {
     loadEquipmentManagement();
   } catch (error) {
     alert('권한 부여 실패: ' + error.message);
+  }
+};
+
+// Update permission level from user side
+const updateUserPermissionLevel = async (equipmentId, userId, newLevel) => {
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/update`, {
+      method: 'PUT',
+      body: JSON.stringify({ userId: parseInt(userId), permissionLevel: newLevel })
+    });
+    loadUserPermissionSummary();
+    loadEquipmentManagement();
+  } catch (error) {
+    alert('권한 변경 실패: ' + error.message);
   }
 };
 
@@ -1255,6 +1485,16 @@ const editUser = async (userId) => {
     document.getElementById('editUserRole').value = user.user_role || 'staff';
     document.getElementById('editUserSupervisor').value = user.supervisor || '';
 
+    // 담당(staff) 또는 관리자(admin)일 경우 연수책임자란 비활성화
+    const supervisorInput = document.getElementById('editUserSupervisor');
+    const userRole = user.user_role || 'staff';
+    if (userRole === 'staff' || userRole === 'admin') {
+      supervisorInput.disabled = true;
+      supervisorInput.value = '';
+    } else {
+      supervisorInput.disabled = false;
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('userEditModal'));
     modal.show();
   } catch (error) {
@@ -1304,9 +1544,12 @@ document.getElementById('userEditForm')?.addEventListener('submit', async (e) =>
 
 
 // ===== Initialize Admin Page =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check admin access
   requireAdmin();
+
+  // Initialize manager status first
+  await initManagerStatus();
 
   // Load all data
   loadDashboardStats();
@@ -1356,6 +1599,20 @@ document.addEventListener('DOMContentLoaded', () => {
           if (placeholder) placeholder.style.display = 'none';
         };
         reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // 사용자 수정 - 구분 변경 시 연수책임자란 비활성화 토글
+  const editUserRoleSelect = document.getElementById('editUserRole');
+  if (editUserRoleSelect) {
+    editUserRoleSelect.addEventListener('change', (e) => {
+      const supervisorInput = document.getElementById('editUserSupervisor');
+      if (e.target.value === 'staff' || e.target.value === 'admin') {
+        supervisorInput.disabled = true;
+        supervisorInput.value = '';
+      } else {
+        supervisorInput.disabled = false;
       }
     });
   }

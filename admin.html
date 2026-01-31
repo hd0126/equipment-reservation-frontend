@@ -109,9 +109,17 @@
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-gear"></i> 장비 관리</h5>
-        <button class="btn btn-primary btn-sm" onclick="openAddEquipmentModal()">
-          <i class="bi bi-plus-circle"></i> 장비 추가
-        </button>
+        <div>
+          <button class="btn btn-outline-secondary btn-sm me-2" onclick="loadEquipmentManagement()">
+            <i class="bi bi-arrow-clockwise"></i> 새로고침
+          </button>
+          <button class="btn btn-success btn-sm me-2" onclick="exportEquipment()">
+            <i class="bi bi-file-earmark-spreadsheet"></i> 장비 내보내기
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openAddEquipmentModal()">
+            <i class="bi bi-plus-circle"></i> 장비 추가
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <div class="table-responsive">
@@ -147,27 +155,29 @@
           <button class="btn btn-outline-secondary btn-sm me-2" onclick="loadUserPermissionSummary()">
             <i class="bi bi-arrow-clockwise"></i> 새로고침
           </button>
-          <button class="btn btn-success btn-sm" onclick="exportPermissions()">
-            <i class="bi bi-file-earmark-spreadsheet"></i> 권한 내보내기
+          <button class="btn btn-success btn-sm" onclick="exportUsers()">
+            <i class="bi bi-file-earmark-spreadsheet"></i> 사용자 내보내기
           </button>
         </div>
       </div>
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-hover">
-            <thead>
+            <thead class="text-center">
               <tr>
-                <th>ID</th>
-                <th>사용자</th>
-                <th>소속</th>
-                <th>구분</th>
-                <th>권한 수</th>
-                <th>작업</th>
+                <th class="text-center">ID</th>
+                <th class="text-center">사용자</th>
+                <th class="text-center">소속</th>
+                <th class="text-center">구분</th>
+                <th class="text-center">연락처</th>
+                <th class="text-center">가입일</th>
+                <th class="text-center">활용 장비</th>
+                <th class="text-center">작업</th>
               </tr>
             </thead>
             <tbody id="userPermissionSummary">
               <tr>
-                <td colspan="6" class="text-center text-muted">로딩 중...</td>
+                <td colspan="8" class="text-center text-muted">로딩 중...</td>
               </tr>
             </tbody>
           </table>
@@ -185,17 +195,47 @@
         </button>
       </div>
       <div class="card-body">
+        <!-- Reservation Filters -->
+        <div class="row mb-3 g-2">
+          <div class="col-md-3">
+            <label for="reservationEquipmentFilter" class="form-label small">장비별</label>
+            <select class="form-select form-select-sm" id="reservationEquipmentFilter" onchange="filterReservations()">
+              <option value="">전체 장비</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="reservationUserFilter" class="form-label small">이용자별</label>
+            <select class="form-select form-select-sm" id="reservationUserFilter" onchange="filterReservations()">
+              <option value="">전체 이용자</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="reservationStartFilter" class="form-label small">시작일</label>
+            <input type="date" class="form-control form-control-sm" id="reservationStartFilter"
+              onchange="filterReservations()">
+          </div>
+          <div class="col-md-2">
+            <label for="reservationEndFilter" class="form-label small">종료일</label>
+            <input type="date" class="form-control form-control-sm" id="reservationEndFilter"
+              onchange="filterReservations()">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearReservationFilters()">
+              <i class="bi bi-x-circle"></i> 초기화
+            </button>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table table-hover">
-            <thead>
+            <thead class="text-center">
               <tr>
-                <th>ID</th>
-                <th>장비</th>
-                <th>사용자</th>
-                <th>시작</th>
-                <th>종료</th>
-                <th>상태</th>
-                <th>작업</th>
+                <th class="text-center">ID</th>
+                <th class="text-center">장비</th>
+                <th class="text-center">사용자</th>
+                <th class="text-center">시작</th>
+                <th class="text-center">종료</th>
+                <th class="text-center">상태</th>
+                <th class="text-center">작업</th>
               </tr>
             </thead>
             <tbody id="reservationManagementTable">
@@ -513,12 +553,19 @@
             </div>
             <div class="card-body p-2">
               <div class="row g-2">
-                <div class="col-md-8">
+                <div class="col-md-5">
                   <select class="form-select form-select-sm" id="userEquipmentSelect">
                     <option value="">장비 선택...</option>
                   </select>
                 </div>
                 <div class="col-md-4">
+                  <select class="form-select form-select-sm" id="userPermissionLevel">
+                    <option value="normal">일반</option>
+                    <option value="autonomous">자율</option>
+                    <option value="manager">장비담당</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
                   <button class="btn btn-primary btn-sm w-100" onclick="grantUserPermission()">
                     <i class="bi bi-plus"></i> 권한 부여
                   </button>
@@ -538,15 +585,16 @@
                 <table class="table table-sm table-hover mb-0">
                   <thead class="table-light">
                     <tr>
-                      <th>장비명</th>
-                      <th>위치</th>
-                      <th>부여일</th>
-                      <th>취소</th>
+                      <th class="text-center">장비명</th>
+                      <th class="text-center">위치</th>
+                      <th class="text-center">권한</th>
+                      <th class="text-center">부여일</th>
+                      <th class="text-center">삭제</th>
                     </tr>
                   </thead>
                   <tbody id="userPermissionList">
                     <tr>
-                      <td colspan="4" class="text-center text-muted">로딩 중...</td>
+                      <td colspan="5" class="text-center text-muted">로딩 중...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -622,11 +670,10 @@
                   <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
                     <select class="form-select" id="editUserRole">
-                      <option value="">구분을 선택하세요</option>
+                      <option value="" hidden>구분을 선택하세요</option>
                       <option value="intern">인턴</option>
                       <option value="student">학생연구원</option>
                       <option value="staff">담당</option>
-                      <option value="equipment_manager">장비담당자</option>
                       <option value="admin">관리자</option>
                     </select>
                   </div>

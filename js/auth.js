@@ -39,6 +39,19 @@ const isManager = () => {
   return user && ['equipment_manager', 'admin'].includes(user.user_role);
 };
 
+// Check if user has manager permission for any equipment (async)
+let hasManagerPermission = false;
+const checkManagerPermission = async () => {
+  if (hasManagerPermission) return true;
+  try {
+    const data = await apiRequest('/permissions/summary/manager');
+    hasManagerPermission = data.managedEquipmentIds && data.managedEquipmentIds.length > 0;
+    return hasManagerPermission;
+  } catch {
+    return false;
+  }
+};
+
 // Get user role (new system)
 const getUserRole = () => {
   const user = getUser();
@@ -144,14 +157,23 @@ const requireAuth = () => {
   return true;
 };
 
-// Check admin access
-const requireAdmin = () => {
-  if (!isAuthenticated() || !isAdmin()) {
-    alert('관리자 권한이 필요합니다.');
-    window.location.href = 'index.html';
+// Check admin access (admin or equipment manager with manager permission)
+const requireAdmin = async () => {
+  if (!isAuthenticated()) {
+    window.location.href = 'login.html';
     return false;
   }
-  return true;
+
+  // Admin can always access
+  if (isAdmin()) return true;
+
+  // Check if user has manager permission for any equipment
+  const hasPermission = await checkManagerPermission();
+  if (hasPermission) return true;
+
+  alert('관리자 권한이 필요합니다.');
+  window.location.href = 'index.html';
+  return false;
 };
 
 // Update UI based on authentication state
@@ -174,9 +196,19 @@ const updateAuthUI = () => {
     userInfo.style.display = 'flex';
     if (loginLink) loginLink.style.display = 'none';
 
-    // Show admin link if user is admin
-    if (adminLink && user.role === 'admin') {
-      adminLink.style.display = 'block';
+    // Show admin link if user is admin or has manager permission
+    if (adminLink) {
+      if (user.user_role === 'admin') {
+        adminLink.style.display = 'block';
+      } else {
+        // Check if user has equipment manager permission (async)
+        checkManagerPermission().then(hasPermission => {
+          console.log('Manager permission check:', hasPermission);
+          if (hasPermission) {
+            adminLink.style.display = 'block';
+          }
+        }).catch(err => console.error('Manager permission check error:', err));
+      }
     }
   } else {
     if (userInfo) userInfo.style.display = 'none';
