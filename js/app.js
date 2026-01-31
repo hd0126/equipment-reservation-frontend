@@ -273,7 +273,7 @@ const showEquipmentDetails = async (equipmentId) => {
                       <div class="d-flex justify-content-between align-items-start">
                         <div>
                           <small class="fw-bold">${log.username || '시스템'}</small>
-                          <small class="text-muted ms-2">${new Date(log.created_at).toLocaleDateString('ko-KR')}</small>
+                          <small class="text-muted ms-2">${new Date(log.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
                         </div>
                         ${canModify ? `
                           <div class="btn-group btn-group-sm">
@@ -317,6 +317,7 @@ const showEquipmentDetails = async (equipmentId) => {
                   <tr>
                     <th class="py-1 px-2">날짜</th>
                     <th class="py-1 px-2">시간</th>
+                    <th class="py-1 px-2 text-center">시간</th>
                     <th class="py-1 px-2">예약자</th>
                   </tr>
                 </thead>
@@ -327,10 +328,13 @@ const showEquipmentDetails = async (equipmentId) => {
       const dateStr = start.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
       const timeStr = start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) +
         '~' + end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const durationMins = Math.round((end - start) / 60000);
+      const durationStr = durationMins >= 60 ? (durationMins / 60) + 'h' : durationMins + 'm';
       return `
                     <tr title="${r.purpose || ''}">
                       <td class="py-1 px-2">${dateStr}</td>
                       <td class="py-1 px-2">${timeStr}</td>
+                      <td class="py-1 px-2 text-center"><span class="badge bg-info">${durationStr}</span></td>
                       <td class="py-1 px-2"><strong>${r.username}</strong></td>
                     </tr>
                   `}).join('')}
