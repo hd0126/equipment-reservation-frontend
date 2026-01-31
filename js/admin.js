@@ -125,7 +125,9 @@ const loadEquipmentManagement = async () => {
             <td><strong>${e.name}</strong></td>
             <td>${e.location || '-'}</td>
             <td>
-              ${e.manager_name ? `<span class="badge bg-info">${e.manager_name}</span>` : '<span class="text-muted">-</span>'}
+              ${e.manager_name
+            ? e.manager_name.split(', ').map(name => `<span class="badge bg-info">${name}</span>`).join('<br>')
+            : '<span class="text-muted">-</span>'}
             </td>
             <td>
               <span class="badge bg-primary" onclick="openPermissionModal(${e.id}, '${e.name}')" style="cursor:pointer;" title="권한 관리">
