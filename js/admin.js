@@ -147,8 +147,10 @@ const loadStatistics = async (startDate, endDate) => {
     // Render equipment top users
     renderEquipmentTopUsers(stats);
 
-    // Render location stats
-    renderLocationStats(stats);
+    // Render department stats and advanced analytics
+    renderDepartmentStats(stats);
+    renderPeakTimeAnalysis(stats);
+    renderOperationalMetrics(stats);
 
   } catch (error) {
     console.error('Failed to load statistics:', error);
@@ -320,15 +322,14 @@ const renderEquipmentTopUsers = (stats) => {
   }).join('');
 };
 
-// Render location-based statistics (pie chart + table)
-const renderLocationStats = (stats) => {
-  const container = document.getElementById('locationStatsTable');
-  const chartCtx = document.getElementById('locationChart');
+// Chart instances for new analytics
+let departmentChartInstance = null;
+let peakTimeChartInstance = null;
 
-  if (!stats.equipmentStats || stats.equipmentStats.length === 0) {
-    if (container) container.innerHTML = '<tr><td colspan="3" class="text-center text-muted">데이터 없음</td></tr>';
-    return;
-  }
+// Render department-based statistics (pie chart)
+const renderDepartmentStats = (stats) => {
+  const chartCtx = document.getElementById('departmentChart');
+  if (!chartCtx) return;
 
   // Color palette
   const colors = [
@@ -336,83 +337,177 @@ const renderLocationStats = (stats) => {
     '#20c997', '#fd7e14', '#6c757d', '#0dcaf0', '#d63384'
   ];
 
-  // Group equipment by location
-  const locationMap = new Map();
-  stats.equipmentStats.forEach(eq => {
-    const location = eq.location || '미지정';
-    if (!locationMap.has(location)) {
-      locationMap.set(location, {
-        equipmentCount: 0,
-        totalHours: 0
-      });
-    }
-    const loc = locationMap.get(location);
-    loc.equipmentCount++;
-    loc.totalHours += parseFloat(eq.total_hours || 0);
-  });
-
-  // Convert to array and sort by total hours
-  const locationStats = Array.from(locationMap.entries())
-    .map(([name, data]) => ({
-      name,
-      ...data
-    }))
-    .filter(loc => loc.totalHours > 0)
-    .sort((a, b) => b.totalHours - a.totalHours);
-
-  if (locationStats.length === 0) {
-    if (container) container.innerHTML = '<tr><td colspan="3" class="text-center text-muted">데이터 없음</td></tr>';
+  if (!stats.userStats || stats.userStats.length === 0) {
     return;
   }
 
-  // Render pie chart
-  if (chartCtx) {
-    if (locationChartInstance) locationChartInstance.destroy();
+  // Group by department from user stats
+  const deptMap = new Map();
+  stats.userStats.forEach(user => {
+    const dept = user.department || '미지정';
+    if (!deptMap.has(dept)) {
+      deptMap.set(dept, 0);
+    }
+    deptMap.set(dept, deptMap.get(dept) + parseFloat(user.total_hours || 0));
+  });
 
-    locationChartInstance = new Chart(chartCtx, {
-      type: 'pie',
-      data: {
-        labels: locationStats.map(l => l.name),
-        datasets: [{
-          data: locationStats.map(l => l.totalHours.toFixed(1)),
-          backgroundColor: colors.slice(0, locationStats.length),
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              boxWidth: 12,
-              font: { size: 11 }
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => `${context.label}: ${context.raw}h`
-            }
+  const deptStats = Array.from(deptMap.entries())
+    .map(([name, hours]) => ({ name, hours }))
+    .filter(d => d.hours > 0)
+    .sort((a, b) => b.hours - a.hours)
+    .slice(0, 8);
+
+  if (deptStats.length === 0) return;
+
+  if (departmentChartInstance) departmentChartInstance.destroy();
+
+  departmentChartInstance = new Chart(chartCtx, {
+    type: 'pie',
+    data: {
+      labels: deptStats.map(d => d.name),
+      datasets: [{
+        data: deptStats.map(d => d.hours.toFixed(1)),
+        backgroundColor: colors.slice(0, deptStats.length),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, font: { size: 10 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${ctx.raw}h`
           }
         }
       }
-    });
+    }
+  });
+};
+
+// Render peak time analysis (bar chart by hour)
+const renderPeakTimeAnalysis = (stats) => {
+  const chartCtx = document.getElementById('peakTimeChart');
+  if (!chartCtx) return;
+
+  // Use allReservations if available
+  const reservations = allReservations || [];
+  if (reservations.length === 0) return;
+
+  // Count reservations by hour (08:00 ~ 22:00)
+  const hourCounts = new Array(14).fill(0); // 08-21
+  reservations.forEach(r => {
+    if (r.status === 'confirmed') {
+      const startHour = new Date(r.start_time).getHours();
+      if (startHour >= 8 && startHour < 22) {
+        hourCounts[startHour - 8]++;
+      }
+    }
+  });
+
+  const labels = [];
+  for (let i = 8; i < 22; i++) {
+    labels.push(`${i}시`);
   }
 
-  // Render table
-  if (container) {
-    container.innerHTML = locationStats.map((loc, idx) => `
-      <tr>
-        <td>
-          <span class="badge me-1" style="background-color: ${colors[idx % colors.length]};">&nbsp;</span>
-          <strong>${loc.name}</strong>
-        </td>
-        <td class="text-center">${loc.equipmentCount}</td>
-        <td class="text-center">${loc.totalHours.toFixed(1)}h</td>
-      </tr>
-    `).join('');
-  }
+  if (peakTimeChartInstance) peakTimeChartInstance.destroy();
+
+  // Find peak hour
+  const maxCount = Math.max(...hourCounts);
+  const peakHourIdx = hourCounts.indexOf(maxCount);
+
+  peakTimeChartInstance = new Chart(chartCtx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '예약 건수',
+        data: hourCounts,
+        backgroundColor: hourCounts.map((_, idx) => idx === peakHourIdx ? '#dc3545' : '#0d6efd'),
+        borderRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        x: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+};
+
+// Render operational metrics (utilization, no-show rate)
+const renderOperationalMetrics = (stats) => {
+  const container = document.getElementById('operationalMetrics');
+  if (!container) return;
+
+  const reservations = allReservations || [];
+
+  // Calculate metrics
+  const total = reservations.length;
+  const confirmed = reservations.filter(r => r.status === 'confirmed').length;
+  const cancelled = reservations.filter(r => r.status === 'cancelled').length;
+  const pending = reservations.filter(r => r.status === 'pending').length;
+
+  // Calculate utilization rate (confirmed hours / available hours)
+  let totalConfirmedHours = 0;
+  reservations.filter(r => r.status === 'confirmed').forEach(r => {
+    const start = new Date(r.start_time);
+    const end = new Date(r.end_time);
+    totalConfirmedHours += (end - start) / (1000 * 60 * 60);
+  });
+
+  // Assume 14 hours/day operating, last 30 days, equipment count
+  const equipmentCount = stats.equipmentStats?.length || 1;
+  const availableHours = equipmentCount * 14 * 30;
+  const utilizationRate = Math.min(100, (totalConfirmedHours / availableHours) * 100);
+
+  // No-show/cancellation rate
+  const cancellationRate = total > 0 ? (cancelled / total) * 100 : 0;
+
+  // Confirmation rate
+  const confirmRate = total > 0 ? (confirmed / total) * 100 : 0;
+
+  container.innerHTML = `
+    <div class="row text-center g-2">
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-4 fw-bold text-primary">${utilizationRate.toFixed(1)}%</div>
+          <small class="text-muted">장비 가동률</small>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-4 fw-bold text-success">${confirmRate.toFixed(1)}%</div>
+          <small class="text-muted">예약 확정률</small>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-4 fw-bold text-danger">${cancellationRate.toFixed(1)}%</div>
+          <small class="text-muted">취소율</small>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="border rounded p-2">
+          <div class="fs-4 fw-bold text-warning">${pending}</div>
+          <small class="text-muted">대기 중</small>
+        </div>
+      </div>
+    </div>
+    <div class="mt-2 small text-muted text-center">
+      총 ${total}건 중 확정 ${confirmed}건
+    </div>
+  `;
 };
 
 // Load equipment management

@@ -327,34 +327,41 @@
               </div>
             </div>
 
-            <!-- Location Stats Row -->
+            <!-- Department Stats + Analysis Row -->
             <div class="row mb-4">
-              <div class="col-lg-6 mb-3">
+              <!-- Department Usage Pie Chart -->
+              <div class="col-lg-4 mb-3">
                 <div class="card h-100">
                   <div class="card-header py-2">
-                    <h6 class="mb-0"><i class="bi bi-building text-info"></i> 실별 활용현황 비교</h6>
+                    <h6 class="mb-0"><i class="bi bi-people-fill text-info"></i> 부서별 활용현황</h6>
                   </div>
-                  <div class="card-body" style="max-height: 280px; overflow: hidden;">
-                    <canvas id="locationChart" height="180"></canvas>
+                  <div class="card-body" style="max-height: 250px; overflow: hidden;">
+                    <canvas id="departmentChart" height="160"></canvas>
                   </div>
                 </div>
               </div>
-              <div class="col-lg-6 mb-3">
-                <div class="table-responsive" style="max-height: 280px;">
-                  <table class="table table-sm table-bordered table-hover">
-                    <thead class="sticky-top bg-light">
-                      <tr>
-                        <th>위치</th>
-                        <th class="text-center">장비 수</th>
-                        <th class="text-center">총 사용시간</th>
-                      </tr>
-                    </thead>
-                    <tbody id="locationStatsTable">
-                      <tr>
-                        <td colspan="3" class="text-center text-muted">통계 로딩 중...</td>
-                      </tr>
-                    </tbody>
-                  </table>
+              <!-- Peak Time Analysis -->
+              <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                  <div class="card-header py-2">
+                    <h6 class="mb-0"><i class="bi bi-clock-fill text-warning"></i> 피크 타임 분석</h6>
+                  </div>
+                  <div class="card-body" style="max-height: 250px; overflow: hidden;">
+                    <canvas id="peakTimeChart" height="160"></canvas>
+                  </div>
+                </div>
+              </div>
+              <!-- Utilization & No-show Stats -->
+              <div class="col-lg-4 mb-3">
+                <div class="card h-100">
+                  <div class="card-header py-2">
+                    <h6 class="mb-0"><i class="bi bi-graph-up text-success"></i> 운영 지표</h6>
+                  </div>
+                  <div class="card-body py-3">
+                    <div id="operationalMetrics">
+                      <div class="text-center text-muted">로딩 중...</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
