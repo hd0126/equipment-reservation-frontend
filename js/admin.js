@@ -228,6 +228,16 @@ const openAddEquipmentModal = () => {
   document.getElementById('equipmentId').value = '';
   document.getElementById('equipmentModalLabel').textContent = '새 장비 추가';
 
+  // 이미지 미리보기 초기화
+  const previewContainer = document.getElementById('imagePreviewContainer');
+  if (previewContainer) previewContainer.style.display = 'none';
+
+  // 문서 버튼 초기화
+  ['currentBrochure', 'currentManual', 'currentQuickGuide'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+
   const modal = new bootstrap.Modal(document.getElementById('equipmentModal'));
   modal.show();
 };
@@ -244,8 +254,21 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentStatus').value = equipment.status;
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 이미지/문서 조회/삭제 버튼 렌더링 함수
-    const renderViewDeleteButtons = (url, docType, equipId) => {
+    // 이미지 미리보기 표시
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const previewImg = document.getElementById('imagePreview');
+    if (equipment.image_url && previewContainer && previewImg) {
+      previewImg.src = equipment.image_url;
+      previewContainer.style.display = 'block';
+      previewImg.onerror = () => {
+        previewContainer.style.display = 'none';
+      };
+    } else if (previewContainer) {
+      previewContainer.style.display = 'none';
+    }
+
+    // 문서 조회/삭제 버튼 렌더링 함수
+    const renderDocButtons = (url, docType, equipId) => {
       if (!url) return '';
       return `
         <a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" title="조회">
@@ -258,25 +281,19 @@ window.editEquipment = async (id) => {
       `;
     };
 
-    // 현재 이미지 조회/삭제 버튼 표시
-    const currentImage = document.getElementById('currentImage');
-    if (currentImage) {
-      currentImage.innerHTML = renderViewDeleteButtons(equipment.image_url, 'image', equipment.id);
-    }
-
-    // 현재 문서 파일 표시 (컴팩트한 조회/삭제 버튼)
+    // 현재 문서 파일 표시
     const currentBrochure = document.getElementById('currentBrochure');
     const currentManual = document.getElementById('currentManual');
     const currentQuickGuide = document.getElementById('currentQuickGuide');
 
     if (currentBrochure) {
-      currentBrochure.innerHTML = renderViewDeleteButtons(equipment.brochure_url, 'brochure', equipment.id);
+      currentBrochure.innerHTML = renderDocButtons(equipment.brochure_url, 'brochure', equipment.id);
     }
     if (currentManual) {
-      currentManual.innerHTML = renderViewDeleteButtons(equipment.manual_url, 'manual', equipment.id);
+      currentManual.innerHTML = renderDocButtons(equipment.manual_url, 'manual', equipment.id);
     }
     if (currentQuickGuide) {
-      currentQuickGuide.innerHTML = renderViewDeleteButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
+      currentQuickGuide.innerHTML = renderDocButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
     }
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
@@ -357,22 +374,24 @@ window.handleDeleteDocument = async (equipmentId, type, fileUrl) => {
     const elementId = {
       'brochure': 'currentBrochure',
       'manual': 'currentManual',
-      'quick_guide': 'currentQuickGuide',
-      'image': 'currentImage'
+      'quick_guide': 'currentQuickGuide'
     }[type];
     const element = document.getElementById(elementId);
     if (element) {
       element.innerHTML = '';
     }
-    // 이미지인 경우 URL 입력 필드도 비우기
+    // 이미지인 경우 URL 입력 필드와 미리보기도 처리
     if (type === 'image') {
       document.getElementById('equipmentImageUrl').value = '';
+      const previewContainer = document.getElementById('imagePreviewContainer');
+      if (previewContainer) previewContainer.style.display = 'none';
     }
   }
 };
 
-// 파일 선택 시 즉시 크기 검증
+// 파일 선택 시 즉시 크기 검증 + 이미지 미리보기
 document.addEventListener('DOMContentLoaded', () => {
+  // 문서 파일 크기 검증
   const fileInputs = ['equipmentBrochure', 'equipmentManual', 'equipmentQuickGuide'];
   fileInputs.forEach(inputId => {
     const input = document.getElementById(inputId);
@@ -385,6 +404,54 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  // 이미지 URL 입력 시 미리보기
+  const imageUrlInput = document.getElementById('equipmentImageUrl');
+  const imageFileInput = document.getElementById('equipmentImageFile');
+  const previewContainer = document.getElementById('imagePreviewContainer');
+  const previewImg = document.getElementById('imagePreview');
+
+  if (imageUrlInput && previewContainer && previewImg) {
+    imageUrlInput.addEventListener('input', (e) => {
+      // 파일이 선택되어 있으면 URL 변경 무시
+      if (imageFileInput && imageFileInput.files.length > 0) return;
+
+      const url = e.target.value.trim();
+      if (url) {
+        previewImg.src = url;
+        previewContainer.style.display = 'block';
+        previewImg.onerror = () => {
+          previewContainer.style.display = 'none';
+        };
+      } else {
+        previewContainer.style.display = 'none';
+      }
+    });
+  }
+
+  // 이미지 파일 선택 시 미리보기 (파일 우선)
+  if (imageFileInput && previewContainer && previewImg) {
+    imageFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          previewImg.src = event.target.result;
+          previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // 파일 선택 취소 시 URL 기반 미리보기로 복원
+        const url = imageUrlInput?.value.trim();
+        if (url) {
+          previewImg.src = url;
+          previewContainer.style.display = 'block';
+        } else {
+          previewContainer.style.display = 'none';
+        }
+      }
+    });
+  }
 });
 
 // Handle equipment form submission

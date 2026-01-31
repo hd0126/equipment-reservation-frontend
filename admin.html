@@ -352,17 +352,22 @@
 
               <!-- Right Column -->
               <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="equipmentImageUrl" class="form-label">이미지 URL</label>
-                  <input type="url" class="form-control" id="equipmentImageUrl" placeholder="https://...">
+                <!-- 이미지 미리보기 -->
+                <div class="mb-3 text-center" id="imagePreviewContainer" style="display:none;">
+                  <img id="imagePreview" src="" alt="이미지 미리보기" class="img-thumbnail"
+                    style="max-height:150px; max-width:100%;">
                 </div>
 
                 <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label for="equipmentImageFile" class="form-label mb-0">또는 이미지 파일 업로드</label>
-                    <span id="currentImage"></span>
-                  </div>
+                  <label for="equipmentImageUrl" class="form-label">이미지 URL</label>
+                  <input type="url" class="form-control" id="equipmentImageUrl" placeholder="https://...">
+                  <small class="text-muted">URL 입력 또는 아래에서 파일을 선택하세요</small>
+                </div>
+
+                <div class="mb-3">
+                  <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
                   <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
+                  <small class="text-muted">파일 선택 시 URL보다 우선 적용됩니다</small>
                 </div>
 
                 <!-- 문서 업로드 섹션 -->
