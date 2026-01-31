@@ -253,20 +253,16 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentLocation').value = equipment.location || '';
     document.getElementById('equipmentStatus').value = equipment.status;
 
-    // R2에 업로드된 이미지나 base64 데이터는 URL 필드에 표시하지 않음
-    // 외부 URL만 URL 필드에 표시
-    const isInternalUrl = equipment.image_url && (
-      equipment.image_url.includes('r2.dev') ||
-      equipment.image_url.includes('r2.cloudflarestorage.com') ||
-      equipment.image_url.startsWith('data:')
-    );
-    document.getElementById('equipmentImageUrl').value = isInternalUrl ? '' : (equipment.image_url || '');
+    // 이미지 URL 필드: 직접 입력한 URL만 표시 (image_url)
+    document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 이미지 미리보기 표시
+    // 이미지 미리보기: image_file_url (R2 업로드) 우선, 없으면 image_url 사용
     const previewContainer = document.getElementById('imagePreviewContainer');
     const previewImg = document.getElementById('imagePreview');
-    if (equipment.image_url && previewContainer && previewImg) {
-      previewImg.src = equipment.image_url;
+    const displayImage = equipment.image_file_url || equipment.image_url;
+
+    if (displayImage && previewContainer && previewImg) {
+      previewImg.src = displayImage;
       previewContainer.style.display = 'block';
       previewImg.onerror = () => {
         previewContainer.style.display = 'none';
@@ -479,63 +475,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const description = document.getElementById('equipmentDescription').value;
       const location = document.getElementById('equipmentLocation').value;
       const status = document.getElementById('equipmentStatus').value;
-      const imageUrl = document.getElementById('equipmentImageUrl').value;
-      const imageFile = document.getElementById('equipmentImageFile').files[0];
+      const imageUrl = document.getElementById('equipmentImageUrl').value; // 직접 입력 URL
+      const imageFile = document.getElementById('equipmentImageFile').files[0]; // 업로드 파일
 
       // 문서 파일들
       const brochureFile = document.getElementById('equipmentBrochure')?.files[0];
       const manualFile = document.getElementById('equipmentManual')?.files[0];
       const quickGuideFile = document.getElementById('equipmentQuickGuide')?.files[0];
 
-      formData.append('name', name);
-      formData.append('description', description);
-      formData.append('location', location);
-      formData.append('status', status);
-
-      if (imageUrl) formData.append('image_url', imageUrl);
-      if (imageFile) formData.append('image', imageFile);
-
       try {
         let savedEquipmentId = equipmentId;
 
         if (equipmentId) {
-          // Update existing equipment - preserve existing document URLs and image
+          // Update existing equipment
           const existingEquipment = await getEquipmentById(equipmentId);
 
-          // Determine final image URL
-          let finalImageUrl = imageUrl; // URL input takes priority
+          // 파일 업로드 처리 (R2에 업로드하고 image_file_url 획득)
+          let newImageFileUrl = existingEquipment.image_file_url;
           if (imageFile) {
-            // If new file uploaded, upload it
-            const imageFormData = new FormData();
-            imageFormData.append('image', imageFile);
-            imageFormData.append('name', name);
-            imageFormData.append('description', description);
-            imageFormData.append('location', location);
-            imageFormData.append('status', status);
-
-            const result = await apiRequest(`/equipment/${equipmentId}`, {
-              method: 'PUT',
-              body: imageFormData,
+            const uploadFormData = new FormData();
+            uploadFormData.append('image', imageFile);
+            const uploadResult = await apiRequest('/upload/image', {
+              method: 'POST',
+              body: uploadFormData,
               headers: {}
             });
-            finalImageUrl = result.image_url || existingEquipment.image_url;
+            newImageFileUrl = uploadResult.url;
           }
 
-          // Build update data preserving existing values
+          // Build update data
           const data = {
             name,
             description,
             location,
             status,
-            image_url: finalImageUrl || existingEquipment.image_url,
+            image_url: imageUrl, // 직접 입력 URL (사용자가 입력한 그대로 보존)
+            image_file_url: newImageFileUrl, // R2 업로드 URL
             brochure_url: existingEquipment.brochure_url,
             manual_url: existingEquipment.manual_url,
             quick_guide_url: existingEquipment.quick_guide_url
           };
 
-          if (!imageFile) {
-            await updateEquipment(equipmentId, data);
-          }
+          await updateEquipment(equipmentId, data);
 
           // Upload new document files if provided
           let brochureUrl = null, manualUrl = null, quickGuideUrl = null;
@@ -562,18 +543,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else {
           // Create new equipment
+          let newImageFileUrl = null;
+
+          // 파일 업로드 처리
           if (imageFile) {
-            const result = await apiRequest('/equipment', {
+            const uploadFormData = new FormData();
+            uploadFormData.append('image', imageFile);
+            const uploadResult = await apiRequest('/upload/image', {
               method: 'POST',
-              body: formData,
+              body: uploadFormData,
               headers: {}
             });
-            savedEquipmentId = result.id;
-          } else {
-            const data = { name, description, location, status, image_url: imageUrl };
-            const result = await createEquipment(data);
-            savedEquipmentId = result.id;
+            newImageFileUrl = uploadResult.url;
           }
+
+          const data = {
+            name,
+            description,
+            location,
+            status,
+            image_url: imageUrl, // 직접 입력 URL
+            image_file_url: newImageFileUrl // R2 업로드 URL
+          };
+          const result = await createEquipment(data);
+          savedEquipmentId = result.equipmentId;
 
           // 문서 파일 업로드 (새 장비 저장 후)
           if (savedEquipmentId) {
@@ -598,6 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 location: existingEquipment.location,
                 status: existingEquipment.status,
                 image_url: existingEquipment.image_url,
+                image_file_url: existingEquipment.image_file_url,
                 brochure_url: brochureUrl || existingEquipment.brochure_url,
                 manual_url: manualUrl || existingEquipment.manual_url,
                 quick_guide_url: quickGuideUrl || existingEquipment.quick_guide_url

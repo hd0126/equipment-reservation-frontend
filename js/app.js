@@ -91,12 +91,13 @@ const renderEquipmentCard = (equipment) => {
   const statusClass = equipment.status === 'available' ? 'status-available' : 'status-maintenance';
   const statusText = equipment.status === 'available' ? '사용 가능' : '점검 중';
   const defaultImage = 'https://via.placeholder.com/400x200?text=' + encodeURIComponent(equipment.name);
+  const displayImage = equipment.image_file_url || equipment.image_url || defaultImage;
 
   return `
     <div class="col-md-6 col-lg-4 mb-4">
       <div class="card equipment-card h-100">
         <div class="cursor-pointer" onclick="showEquipmentDetails(${equipment.id})">
-          <img src="${equipment.image_url || defaultImage}" class="card-img-top" alt="${equipment.name}">
+          <img src="${displayImage}" class="card-img-top" alt="${equipment.name}">
           <div class="card-body">
             <h5 class="card-title">${equipment.name}</h5>
             <p class="card-text text-muted">${equipment.description || '설명 없음'}</p>
