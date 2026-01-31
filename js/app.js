@@ -113,7 +113,7 @@ const renderEquipmentCard = (equipment) => {
     <div class="col-md-6 col-lg-4 mb-4">
       <div class="card equipment-card h-100 d-flex flex-column">
         <div class="cursor-pointer flex-grow-1 d-flex flex-column" onclick="showEquipmentDetails(${equipment.id})">
-          <img src="${displayImage}" class="card-img-top" alt="${equipment.name}" style="height: 180px; object-fit: cover;">
+          <img src="${displayImage}" class="card-img-top" alt="${equipment.name}" style="height: 180px; object-fit: contain; background: #f8f9fa;">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title" style="height: 48px; overflow: hidden; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${equipment.name}</h5>
             <div class="card-text text-muted mb-2" style="height: 80px; overflow-y: auto; line-height: 1.4;">${descriptionHtml}</div>
