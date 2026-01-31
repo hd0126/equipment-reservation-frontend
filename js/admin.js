@@ -845,18 +845,22 @@ window.setQuickPeriod = (period) => {
 
   switch (period) {
     case 'thisMonth':
+      // 이번 달: 1일 ~ 말일
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // 다음달 0일 = 이번달 말일
       break;
     case 'lastMonth':
+      // 지난 달: 1일 ~ 말일
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0);
+      end = new Date(now.getFullYear(), now.getMonth(), 0); // 이번달 0일 = 지난달 말일
       break;
     case 'last3Months':
+      // 최근 3개월: 3개월 전 1일 ~ 오늘
       start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // 오늘
       break;
     case 'thisYear':
+      // 올해: 1월 1일 ~ 12월 31일
       start = new Date(now.getFullYear(), 0, 1);
       end = new Date(now.getFullYear(), 11, 31);
       break;
@@ -868,8 +872,16 @@ window.setQuickPeriod = (period) => {
       return;
   }
 
-  startInput.value = start.toISOString().split('T')[0];
-  endInput.value = end.toISOString().split('T')[0];
+  // 날짜를 로컬 타임존으로 포맷
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  startInput.value = formatDate(start);
+  endInput.value = formatDate(end);
   filterReservations();
   loadStatistics(startInput.value, endInput.value);
 };
@@ -1234,15 +1246,27 @@ const exportUsers = async () => {
 // Populate filter dropdowns
 const populateReservationFilters = async () => {
   try {
-    const equipment = await getEquipment();
+    let equipment = await getEquipment();
+
+    // 장비담당자이면 담당 장비만 필터링
+    const user = getCurrentUser();
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      equipment = equipment.filter(e => managedEquipmentIds.includes(e.id));
+    }
+
     const equipmentFilter = document.getElementById('reservationEquipmentFilter');
     if (equipmentFilter) {
       equipmentFilter.innerHTML = '<option value="">전체 장비</option>' +
         equipment.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
     }
 
-    // Get unique users from reservations
-    const users = [...new Map(allReservations.map(r => [r.user_id, { id: r.user_id, name: r.user_name }])).values()];
+    // Get unique users from reservations (username 또는 user_name 사용)
+    const users = [...new Map(
+      allReservations
+        .filter(r => r.user_id && (r.username || r.user_name)) // 유효한 데이터만
+        .map(r => [r.user_id, { id: r.user_id, name: r.username || r.user_name }])
+    ).values()];
+
     const userFilter = document.getElementById('reservationUserFilter');
     if (userFilter) {
       userFilter.innerHTML = '<option value="">전체 이용자</option>' +
