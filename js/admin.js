@@ -126,9 +126,6 @@ const loadEquipmentManagement = async () => {
             <td>${e.location || '-'}</td>
             <td>
               ${e.manager_name ? `<span class="badge bg-info">${e.manager_name}</span>` : '<span class="text-muted">-</span>'}
-              <button class="btn btn-sm btn-outline-secondary ms-1" onclick="openManagerModal(${e.id}, '${e.name}')" title="담당자 지정">
-                <i class="bi bi-person-gear"></i>
-              </button>
             </td>
             <td>
               <span class="badge bg-primary" onclick="openPermissionModal(${e.id}, '${e.name}')" style="cursor:pointer;" title="권한 관리">
