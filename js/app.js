@@ -472,30 +472,60 @@ let dragStartIndex = -1;
 let dragStartDate = null;
 
 // Load reservation grid (D-day to D+2) - 2-Row Compact Layout
-const renderReservationGrid = async (equipmentId) => {
+let gridStartOffset = 0; // Days offset from today
+let currentGridEquipmentId = null;
+
+const renderReservationGrid = async (equipmentId, startOffset = 0) => {
   const container = document.getElementById('reservationGridContainer');
   if (!container) return;
   container.innerHTML = '<div class="spinner-container"><div class="spinner-border text-primary"></div></div>';
 
+  currentGridEquipmentId = equipmentId;
+  gridStartOffset = startOffset;
+
   try {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const dates = [];
     for (let i = 0; i < 3; i++) {
       const d = new Date(today);
-      d.setDate(d.getDate() + i);
+      d.setDate(d.getDate() + startOffset + i);
       dates.push(d.toISOString().split('T')[0]);
     }
 
     const reservations = await getEquipmentReservations(equipmentId);
     const confirmedReservations = reservations.filter(r => r.status === 'confirmed');
 
-    const dayLabels = ['오늘', '내일', '모레'];
+    // Generate day labels based on offset
+    const getDayLabel = (offset) => {
+      if (offset === 0) return '오늘';
+      if (offset === 1) return '내일';
+      if (offset === 2) return '모레';
+      if (offset < 0) return `${Math.abs(offset)}일 전`;
+      return `${offset}일 후`;
+    };
+
     const hours = [];
     for (let h = 8; h <= 21; h++) {
       hours.push(h.toString().padStart(2, '0'));
     }
 
-    let html = `<div class="reservation-grid">`;
+    // Navigation buttons
+    let html = `
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <button class="btn btn-sm btn-outline-secondary" onclick="navigateGrid(-3)" ${startOffset <= 0 ? 'disabled' : ''}>
+        <i class="bi bi-chevron-left"></i> 이전
+      </button>
+      <span class="small text-muted">
+        ${dates[0].split('-').slice(1).join('/')} ~ ${dates[2].split('-').slice(1).join('/')}
+      </span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="navigateGrid(3)">
+        다음 <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+    `;
+
+    html += `<div class="reservation-grid">`;
 
     // Header Row (Hours)
     html += `<div class="grid-header-cell">날짜 \\ 시</div>`;
@@ -505,11 +535,14 @@ const renderReservationGrid = async (equipmentId) => {
 
     // Each date gets 2 rows
     dates.forEach((date, dateIdx) => {
+      const dayOffset = startOffset + dateIdx;
+      const dayLabel = getDayLabel(dayOffset);
+
       // First Row: :00 Slots
       html += `
       <div class="grid-date-column">
           <span class="grid-date-label">${date.split('-').slice(1).join('/')}</span>
-          <span class="grid-day-label">${dayLabels[dateIdx]}</span>
+          <span class="grid-day-label">${dayLabel}</span>
         </div>`;
 
       hours.forEach((hour, hIdx) => {
@@ -535,6 +568,14 @@ const renderReservationGrid = async (equipmentId) => {
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger m-2">정보를 불러오지 못했습니다.</div>';
   }
+};
+
+// Navigate grid by days
+window.navigateGrid = (days) => {
+  const newOffset = gridStartOffset + days;
+  // Don't allow going before today
+  if (newOffset < 0) return;
+  renderReservationGrid(currentGridEquipmentId, newOffset);
 };
 
 const renderSlot = (date, time, slotIdx, confirmedReservations, isOddRow) => {
