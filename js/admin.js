@@ -761,8 +761,10 @@ const bulkDeleteReservations = async () => {
       alert(`${successCount}개 예약이 삭제되었습니다.`);
     }
 
-    // Reload reservations
+    // Reload reservations and statistics
     loadReservationManagement();
+    loadDashboardStats();
+    loadStatistics();  // 상세 통계도 새로고침
   } catch (error) {
     console.error('Bulk delete failed:', error);
     alert('일괄 삭제 중 오류가 발생했습니다.');
