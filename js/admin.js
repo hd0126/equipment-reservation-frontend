@@ -253,13 +253,14 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentLocation').value = equipment.location || '';
     document.getElementById('equipmentStatus').value = equipment.status;
 
-    // R2에 업로드된 이미지는 URL 필드에 표시하지 않음 (파일 업로드로 처리된 것)
+    // R2에 업로드된 이미지나 base64 데이터는 URL 필드에 표시하지 않음
     // 외부 URL만 URL 필드에 표시
-    const isR2Url = equipment.image_url && (
+    const isInternalUrl = equipment.image_url && (
       equipment.image_url.includes('r2.dev') ||
-      equipment.image_url.includes('r2.cloudflarestorage.com')
+      equipment.image_url.includes('r2.cloudflarestorage.com') ||
+      equipment.image_url.startsWith('data:')
     );
-    document.getElementById('equipmentImageUrl').value = isR2Url ? '' : (equipment.image_url || '');
+    document.getElementById('equipmentImageUrl').value = isInternalUrl ? '' : (equipment.image_url || '');
 
     // 이미지 미리보기 표시
     const previewContainer = document.getElementById('imagePreviewContainer');
