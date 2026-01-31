@@ -492,7 +492,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           // 파일 업로드 처리 (R2에 업로드하고 image_file_url 획득)
           let newImageFileUrl = existingEquipment.image_file_url;
+          console.log('[DEBUG] imageFile:', imageFile);
+          console.log('[DEBUG] existing image_file_url:', existingEquipment.image_file_url);
+
           if (imageFile) {
+            console.log('[DEBUG] Uploading image file:', imageFile.name);
             // 파일을 base64로 변환
             const base64 = await new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -501,6 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
               reader.readAsDataURL(imageFile);
             });
 
+            console.log('[DEBUG] Base64 length:', base64.length);
             const uploadResult = await apiRequest('/upload/image', {
               method: 'POST',
               body: JSON.stringify({
@@ -509,8 +514,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 equipmentId: equipmentId
               })
             });
+            console.log('[DEBUG] Upload result:', uploadResult);
             newImageFileUrl = uploadResult.url;
           }
+
+          console.log('[DEBUG] Final newImageFileUrl:', newImageFileUrl);
 
           // Build update data
           const data = {
@@ -525,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quick_guide_url: existingEquipment.quick_guide_url
           };
 
+          console.log('[DEBUG] Update data:', data);
           await updateEquipment(equipmentId, data);
 
           // Upload new document files if provided
