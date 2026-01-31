@@ -244,18 +244,8 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentStatus').value = equipment.status;
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 이미지 미리보기 표시
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
-    if (equipment.image_url) {
-      previewImg.src = equipment.image_url;
-      imagePreview.style.display = 'block';
-    } else {
-      imagePreview.style.display = 'none';
-    }
-
-    // 현재 문서 파일 표시 (컴팩트한 조회/삭제 버튼)
-    const renderDocButtons = (url, docType, equipId) => {
+    // 이미지/문서 조회/삭제 버튼 렌더링 함수
+    const renderViewDeleteButtons = (url, docType, equipId) => {
       if (!url) return '';
       return `
         <a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" title="조회">
@@ -268,18 +258,25 @@ window.editEquipment = async (id) => {
       `;
     };
 
+    // 현재 이미지 조회/삭제 버튼 표시
+    const currentImage = document.getElementById('currentImage');
+    if (currentImage) {
+      currentImage.innerHTML = renderViewDeleteButtons(equipment.image_url, 'image', equipment.id);
+    }
+
+    // 현재 문서 파일 표시 (컴팩트한 조회/삭제 버튼)
     const currentBrochure = document.getElementById('currentBrochure');
     const currentManual = document.getElementById('currentManual');
     const currentQuickGuide = document.getElementById('currentQuickGuide');
 
     if (currentBrochure) {
-      currentBrochure.innerHTML = renderDocButtons(equipment.brochure_url, 'brochure', equipment.id);
+      currentBrochure.innerHTML = renderViewDeleteButtons(equipment.brochure_url, 'brochure', equipment.id);
     }
     if (currentManual) {
-      currentManual.innerHTML = renderDocButtons(equipment.manual_url, 'manual', equipment.id);
+      currentManual.innerHTML = renderViewDeleteButtons(equipment.manual_url, 'manual', equipment.id);
     }
     if (currentQuickGuide) {
-      currentQuickGuide.innerHTML = renderDocButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
+      currentQuickGuide.innerHTML = renderViewDeleteButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
     }
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
@@ -329,9 +326,10 @@ const uploadDocument = async (file, type, equipmentId) => {
   return response.url;
 };
 
-// 문서 파일 삭제
+// 문서/이미지 파일 삭제
 const deleteDocument = async (equipmentId, type, fileUrl) => {
-  if (!confirm('이 문서를 삭제하시겠습니까?')) {
+  const typeLabel = type === 'image' ? '이미지' : '문서';
+  if (!confirm(`이 ${typeLabel}를 삭제하시겠습니까?`)) {
     return false;
   }
   try {
@@ -343,10 +341,10 @@ const deleteDocument = async (equipmentId, type, fileUrl) => {
         fileUrl: fileUrl
       })
     });
-    alert('문서가 삭제되었습니다.');
+    alert(`${typeLabel}가 삭제되었습니다.`);
     return true;
   } catch (error) {
-    alert('문서 삭제 실패: ' + error.message);
+    alert(`${typeLabel} 삭제 실패: ` + error.message);
     return false;
   }
 };
@@ -359,11 +357,16 @@ window.handleDeleteDocument = async (equipmentId, type, fileUrl) => {
     const elementId = {
       'brochure': 'currentBrochure',
       'manual': 'currentManual',
-      'quick_guide': 'currentQuickGuide'
+      'quick_guide': 'currentQuickGuide',
+      'image': 'currentImage'
     }[type];
     const element = document.getElementById(elementId);
     if (element) {
       element.innerHTML = '';
+    }
+    // 이미지인 경우 URL 입력 필드도 비우기
+    if (type === 'image') {
+      document.getElementById('equipmentImageUrl').value = '';
     }
   }
 };
@@ -1193,41 +1196,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load permission summaries
   loadUserPermissionSummary();
-
-  // Image preview handlers
-  const imageUrlInput = document.getElementById('equipmentImageUrl');
-  const imageFileInput = document.getElementById('equipmentImageFile');
-  const imagePreview = document.getElementById('imagePreview');
-  const previewImg = document.getElementById('previewImg');
-
-  if (imageUrlInput && imagePreview && previewImg) {
-    // URL 입력 시 미리보기
-    imageUrlInput.addEventListener('input', (e) => {
-      const url = e.target.value.trim();
-      if (url) {
-        previewImg.src = url;
-        imagePreview.style.display = 'block';
-        previewImg.onerror = () => {
-          imagePreview.style.display = 'none';
-        };
-      } else {
-        imagePreview.style.display = 'none';
-      }
-    });
-  }
-
-  if (imageFileInput && imagePreview && previewImg) {
-    // 파일 선택 시 미리보기
-    imageFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          previewImg.src = event.target.result;
-          imagePreview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
 });
