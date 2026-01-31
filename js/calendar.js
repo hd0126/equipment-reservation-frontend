@@ -54,6 +54,27 @@ const handleDateSelect = (info) => {
     return;
   }
 
+  // Check operating hours (08:00 - 22:00) for week/day view
+  if (info.startStr.includes('T')) {
+    const startHour = new Date(info.start).getHours();
+    const endHour = new Date(info.end).getHours();
+    const endMin = new Date(info.end).getMinutes();
+
+    // Check if start time is before 08:00
+    if (startHour < 8) {
+      alert('예약 가능 시간은 08:00 ~ 22:00입니다.\n\n08:00 이전에는 예약할 수 없습니다.');
+      calendar.unselect();
+      return;
+    }
+
+    // Check if end time is after 22:00
+    if (endHour > 22 || (endHour === 22 && endMin > 0)) {
+      alert('예약 가능 시간은 08:00 ~ 22:00입니다.\n\n22:00 이후에는 예약할 수 없습니다.');
+      calendar.unselect();
+      return;
+    }
+  }
+
   // Get selected equipment info
   const selectedEquipment = permittedEquipment.find(e => e.id === currentEquipmentFilter);
 
