@@ -147,6 +147,9 @@ const loadStatistics = async (startDate, endDate) => {
     // Render equipment top users
     renderEquipmentTopUsers(stats);
 
+    // Render location stats
+    renderLocationStats(stats);
+
   } catch (error) {
     console.error('Failed to load statistics:', error);
     const eqTable = document.getElementById('equipmentStatsTable');
@@ -235,7 +238,7 @@ const renderStatsCharts = (stats) => {
   }
 };
 
-// Render equipment top users visualization (compact cards)
+// Render equipment top users visualization (larger cards)
 const renderEquipmentTopUsers = (stats) => {
   const container = document.getElementById('equipmentTopUsersContainer');
   if (!container) return;
@@ -244,7 +247,7 @@ const renderEquipmentTopUsers = (stats) => {
   const colors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997'];
 
   if (!stats.userEquipmentStats || stats.userEquipmentStats.length === 0) {
-    container.innerHTML = '<div class="text-muted small p-3">데이터 없음</div>';
+    container.innerHTML = '<div class="text-muted p-3">데이터 없음</div>';
     return;
   }
 
@@ -279,39 +282,99 @@ const renderEquipmentTopUsers = (stats) => {
   equipmentTopUsers.sort((a, b) => b.maxHours - a.maxHours);
 
   if (equipmentTopUsers.length === 0) {
-    container.innerHTML = '<div class="text-muted small p-3">사용 데이터 없음</div>';
+    container.innerHTML = '<div class="text-muted p-3">사용 데이터 없음</div>';
     return;
   }
 
-  // Render compact cards
+  // Render larger cards with better readability
   container.innerHTML = equipmentTopUsers.map(eq => {
-    const maxWidth = 100; // bar max width percentage
+    const maxWidth = 100;
     const userBars = eq.users.map((user, idx) => {
       const barWidth = eq.maxHours > 0 ? (user.hours / eq.maxHours * maxWidth) : 0;
       return `
-        <div class="d-flex align-items-center mb-1">
-          <span class="badge me-1" style="background-color: ${colors[idx % colors.length]}; width: 18px; font-size: 10px;">${idx + 1}</span>
-          <div class="flex-grow-1 me-2" style="min-width: 60px;">
-            <div class="small text-truncate" style="max-width: 80px;" title="${user.username}">${user.username}</div>
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge me-2" style="background-color: ${colors[idx % colors.length]}; width: 24px; height: 24px; font-size: 12px; display: flex; align-items: center; justify-content: center;">${idx + 1}</span>
+          <div class="me-2" style="min-width: 80px;">
+            <div class="text-truncate fw-medium" style="max-width: 100px; font-size: 14px;" title="${user.username}">${user.username}</div>
           </div>
-          <div class="progress flex-grow-1" style="height: 12px; min-width: 50px;">
+          <div class="progress flex-grow-1" style="height: 18px; min-width: 80px;">
             <div class="progress-bar" style="width: ${barWidth}%; background-color: ${colors[idx % colors.length]};" 
                  title="${user.hours.toFixed(1)}h"></div>
           </div>
-          <span class="ms-1 small text-muted" style="min-width: 35px;">${user.hours.toFixed(1)}h</span>
+          <span class="ms-2 fw-bold" style="min-width: 50px; font-size: 14px;">${user.hours.toFixed(1)}h</span>
         </div>
       `;
     }).join('');
 
     return `
-      <div class="card" style="width: 240px; flex-shrink: 0;">
-        <div class="card-header py-1 px-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-          <small class="text-white fw-bold text-truncate d-block" title="${eq.name}">${eq.name}</small>
+      <div class="card" style="min-width: 320px; flex-shrink: 0;">
+        <div class="card-header py-2 px-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <span class="text-white fw-bold text-truncate d-block" style="font-size: 15px;" title="${eq.name}">${eq.name}</span>
         </div>
-        <div class="card-body py-2 px-2">
+        <div class="card-body py-3 px-3">
           ${userBars}
         </div>
       </div>
+    `;
+  }).join('');
+};
+
+// Render location-based statistics
+const renderLocationStats = (stats) => {
+  const container = document.getElementById('locationStatsTable');
+  if (!container) return;
+
+  if (!stats.equipmentStats || stats.equipmentStats.length === 0) {
+    container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">데이터 없음</td></tr>';
+    return;
+  }
+
+  // Group equipment by location
+  const locationMap = new Map();
+  stats.equipmentStats.forEach(eq => {
+    const location = eq.location || '미지정';
+    if (!locationMap.has(location)) {
+      locationMap.set(location, {
+        equipmentCount: 0,
+        totalReservations: 0,
+        totalHours: 0
+      });
+    }
+    const loc = locationMap.get(location);
+    loc.equipmentCount++;
+    loc.totalReservations += parseInt(eq.total_count || 0);
+    loc.totalHours += parseFloat(eq.total_hours || 0);
+  });
+
+  // Calculate utilization rate (assuming 12 hours/day operating, last 30 days)
+  const operatingHoursPerMonth = 12 * 30; // 360 hours per equipment
+
+  // Convert to array and sort by total hours
+  const locationStats = Array.from(locationMap.entries())
+    .map(([name, data]) => ({
+      name,
+      ...data,
+      utilizationRate: Math.min(100, (data.totalHours / (data.equipmentCount * operatingHoursPerMonth) * 100))
+    }))
+    .sort((a, b) => b.totalHours - a.totalHours);
+
+  if (locationStats.length === 0) {
+    container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">데이터 없음</td></tr>';
+    return;
+  }
+
+  container.innerHTML = locationStats.map(loc => {
+    const rateColor = loc.utilizationRate > 50 ? 'success' : (loc.utilizationRate > 20 ? 'warning' : 'secondary');
+    return `
+      <tr>
+        <td><strong>${loc.name}</strong></td>
+        <td class="text-center">${loc.equipmentCount}</td>
+        <td class="text-center">${loc.totalReservations}</td>
+        <td class="text-center">${loc.totalHours.toFixed(1)}h</td>
+        <td class="text-center">
+          <span class="badge bg-${rateColor}">${loc.utilizationRate.toFixed(1)}%</span>
+        </td>
+      </tr>
     `;
   }).join('');
 };

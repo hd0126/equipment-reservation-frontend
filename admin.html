@@ -310,8 +310,8 @@
                   <div class="card-header py-2">
                     <h6 class="mb-0"><i class="bi bi-bar-chart-fill text-primary"></i> 장비별 사용시간</h6>
                   </div>
-                  <div class="card-body">
-                    <canvas id="equipmentChart" height="200"></canvas>
+                  <div class="card-body" style="max-height: 280px; overflow: hidden;">
+                    <canvas id="equipmentChart" height="180"></canvas>
                   </div>
                 </div>
               </div>
@@ -320,9 +320,34 @@
                   <div class="card-header py-2">
                     <h6 class="mb-0"><i class="bi bi-pie-chart-fill text-success"></i> 사용자별 사용시간</h6>
                   </div>
-                  <div class="card-body">
-                    <canvas id="userChart" height="200"></canvas>
+                  <div class="card-body" style="max-height: 280px; overflow: hidden;">
+                    <canvas id="userChart" height="180"></canvas>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Location Stats Row -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6><i class="bi bi-building"></i> 실별 활용현황 비교</h6>
+                <div class="table-responsive" style="max-height: 250px;">
+                  <table class="table table-sm table-bordered table-hover">
+                    <thead class="sticky-top bg-light">
+                      <tr>
+                        <th>위치</th>
+                        <th class="text-center">장비 수</th>
+                        <th class="text-center">총 예약</th>
+                        <th class="text-center">총 사용시간</th>
+                        <th class="text-center">활용률</th>
+                      </tr>
+                    </thead>
+                    <tbody id="locationStatsTable">
+                      <tr>
+                        <td colspan="5" class="text-center text-muted">통계 로딩 중...</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
