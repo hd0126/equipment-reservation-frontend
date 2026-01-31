@@ -166,6 +166,7 @@ const loadStatistics = async (startDate, endDate) => {
 // Chart instances (for cleanup)
 let equipmentChartInstance = null;
 let userChartInstance = null;
+let locationChartInstance = null;
 
 // Render statistics charts
 const renderStatsCharts = (stats) => {
@@ -319,15 +320,21 @@ const renderEquipmentTopUsers = (stats) => {
   }).join('');
 };
 
-// Render location-based statistics
+// Render location-based statistics (pie chart + table)
 const renderLocationStats = (stats) => {
   const container = document.getElementById('locationStatsTable');
-  if (!container) return;
+  const chartCtx = document.getElementById('locationChart');
 
   if (!stats.equipmentStats || stats.equipmentStats.length === 0) {
-    container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">데이터 없음</td></tr>';
+    if (container) container.innerHTML = '<tr><td colspan="3" class="text-center text-muted">데이터 없음</td></tr>';
     return;
   }
+
+  // Color palette
+  const colors = [
+    '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1',
+    '#20c997', '#fd7e14', '#6c757d', '#0dcaf0', '#d63384'
+  ];
 
   // Group equipment by location
   const locationMap = new Map();
@@ -336,47 +343,76 @@ const renderLocationStats = (stats) => {
     if (!locationMap.has(location)) {
       locationMap.set(location, {
         equipmentCount: 0,
-        totalReservations: 0,
         totalHours: 0
       });
     }
     const loc = locationMap.get(location);
     loc.equipmentCount++;
-    loc.totalReservations += parseInt(eq.total_count || 0);
     loc.totalHours += parseFloat(eq.total_hours || 0);
   });
-
-  // Calculate utilization rate (assuming 12 hours/day operating, last 30 days)
-  const operatingHoursPerMonth = 12 * 30; // 360 hours per equipment
 
   // Convert to array and sort by total hours
   const locationStats = Array.from(locationMap.entries())
     .map(([name, data]) => ({
       name,
-      ...data,
-      utilizationRate: Math.min(100, (data.totalHours / (data.equipmentCount * operatingHoursPerMonth) * 100))
+      ...data
     }))
+    .filter(loc => loc.totalHours > 0)
     .sort((a, b) => b.totalHours - a.totalHours);
 
   if (locationStats.length === 0) {
-    container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">데이터 없음</td></tr>';
+    if (container) container.innerHTML = '<tr><td colspan="3" class="text-center text-muted">데이터 없음</td></tr>';
     return;
   }
 
-  container.innerHTML = locationStats.map(loc => {
-    const rateColor = loc.utilizationRate > 50 ? 'success' : (loc.utilizationRate > 20 ? 'warning' : 'secondary');
-    return `
+  // Render pie chart
+  if (chartCtx) {
+    if (locationChartInstance) locationChartInstance.destroy();
+
+    locationChartInstance = new Chart(chartCtx, {
+      type: 'pie',
+      data: {
+        labels: locationStats.map(l => l.name),
+        datasets: [{
+          data: locationStats.map(l => l.totalHours.toFixed(1)),
+          backgroundColor: colors.slice(0, locationStats.length),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              boxWidth: 12,
+              font: { size: 11 }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.label}: ${context.raw}h`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Render table
+  if (container) {
+    container.innerHTML = locationStats.map((loc, idx) => `
       <tr>
-        <td><strong>${loc.name}</strong></td>
-        <td class="text-center">${loc.equipmentCount}</td>
-        <td class="text-center">${loc.totalReservations}</td>
-        <td class="text-center">${loc.totalHours.toFixed(1)}h</td>
-        <td class="text-center">
-          <span class="badge bg-${rateColor}">${loc.utilizationRate.toFixed(1)}%</span>
+        <td>
+          <span class="badge me-1" style="background-color: ${colors[idx % colors.length]};">&nbsp;</span>
+          <strong>${loc.name}</strong>
         </td>
+        <td class="text-center">${loc.equipmentCount}</td>
+        <td class="text-center">${loc.totalHours.toFixed(1)}h</td>
       </tr>
-    `;
-  }).join('');
+    `).join('');
+  }
 };
 
 // Load equipment management
