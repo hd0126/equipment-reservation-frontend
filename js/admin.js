@@ -121,21 +121,21 @@ const loadEquipmentManagement = async () => {
 
         return `
           <tr>
-            <td>${e.id}</td>
-            <td><strong>${e.name}</strong></td>
-            <td>${e.location || '-'}</td>
-            <td>
+            <td class="text-center align-middle">${e.id}</td>
+            <td class="text-center align-middle"><strong>${e.name}</strong></td>
+            <td class="text-center align-middle">${e.location || '-'}</td>
+            <td class="text-center align-middle">
               ${e.manager_name
             ? e.manager_name.split(', ').map(name => `<span class="badge bg-info">${name}</span>`).join('<br>')
             : '<span class="text-muted">-</span>'}
             </td>
-            <td>
+            <td class="text-center align-middle">
               <span class="badge bg-primary">
                 ${permCount}명
               </span>
             </td>
-            <td><span class="equipment-status ${statusClass}">${statusText}</span></td>
-            <td>
+            <td class="text-center align-middle"><span class="equipment-status ${statusClass}">${statusText}</span></td>
+            <td class="text-center align-middle">
               <button class="btn btn-sm btn-outline-primary" onclick="editEquipment(${e.id})" title="수정">
                 <i class="bi bi-pencil"></i>
               </button>
@@ -276,11 +276,16 @@ window.editEquipment = async (id) => {
     if (displayImage && previewContainer && previewImg) {
       previewImg.src = displayImage;
       previewImg.style.display = 'block';
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+      if (placeholder) placeholder.style.display = 'none';
       previewImg.onerror = () => {
         previewImg.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
       };
     } else if (previewContainer && previewImg) {
       previewImg.style.display = 'none';
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+      if (placeholder) placeholder.style.display = 'block';
     }
 
     // 문서 조회/삭제 버튼 렌더링 함수
