@@ -493,12 +493,21 @@ document.addEventListener('DOMContentLoaded', () => {
           // 파일 업로드 처리 (R2에 업로드하고 image_file_url 획득)
           let newImageFileUrl = existingEquipment.image_file_url;
           if (imageFile) {
-            const uploadFormData = new FormData();
-            uploadFormData.append('image', imageFile);
+            // 파일을 base64로 변환
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(imageFile);
+            });
+
             const uploadResult = await apiRequest('/upload/image', {
               method: 'POST',
-              body: uploadFormData,
-              headers: {}
+              body: JSON.stringify({
+                file: base64,
+                filename: imageFile.name,
+                equipmentId: equipmentId
+              })
             });
             newImageFileUrl = uploadResult.url;
           }
@@ -545,14 +554,21 @@ document.addEventListener('DOMContentLoaded', () => {
           // Create new equipment
           let newImageFileUrl = null;
 
-          // 파일 업로드 처리
+          // 파일 업로드 처리 (base64로 변환 후 업로드)
           if (imageFile) {
-            const uploadFormData = new FormData();
-            uploadFormData.append('image', imageFile);
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(imageFile);
+            });
+
             const uploadResult = await apiRequest('/upload/image', {
               method: 'POST',
-              body: uploadFormData,
-              headers: {}
+              body: JSON.stringify({
+                file: base64,
+                filename: imageFile.name
+              })
             });
             newImageFileUrl = uploadResult.url;
           }
