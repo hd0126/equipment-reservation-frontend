@@ -114,12 +114,112 @@ const loadStatistics = async (startDate, endDate) => {
         userTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">예약 데이터 없음</td></tr>';
       }
     }
+
+    // Render cross statistics table
+    const crossTable = document.getElementById('crossStatsTable');
+    if (crossTable) {
+      if (stats.userEquipmentStats && stats.userEquipmentStats.length > 0) {
+        crossTable.innerHTML = stats.userEquipmentStats.map(item => {
+          const hours = parseFloat(item.total_hours || 0).toFixed(1);
+          return `
+          <tr>
+            <td>${item.username}</td>
+            <td>${item.equipment_name}</td>
+            <td class="text-center"><span class="badge bg-primary">${item.reservation_count || 0}</span></td>
+            <td class="text-center"><span class="badge bg-info">${hours}h</span></td>
+          </tr>
+        `}).join('');
+      } else {
+        crossTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">교차 통계 데이터 없음</td></tr>';
+      }
+    }
+
+    // Render charts
+    renderStatsCharts(stats);
+
   } catch (error) {
     console.error('Failed to load statistics:', error);
     const eqTable = document.getElementById('equipmentStatsTable');
     if (eqTable) eqTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
     const uTable = document.getElementById('userStatsTable');
     if (uTable) uTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
+    const cTable = document.getElementById('crossStatsTable');
+    if (cTable) cTable.innerHTML = `<tr><td colspan="4" class="text-center text-danger">로드 실패</td></tr>`;
+  }
+};
+
+// Chart instances (for cleanup)
+let equipmentChartInstance = null;
+let userChartInstance = null;
+
+// Render statistics charts
+const renderStatsCharts = (stats) => {
+  // Color palette
+  const colors = [
+    '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1',
+    '#20c997', '#fd7e14', '#6c757d', '#0dcaf0', '#d63384'
+  ];
+
+  // Equipment chart
+  const equipmentCtx = document.getElementById('equipmentChart');
+  if (equipmentCtx && stats.equipmentStats && stats.equipmentStats.length > 0) {
+    if (equipmentChartInstance) equipmentChartInstance.destroy();
+
+    const sortedEquipment = [...stats.equipmentStats]
+      .sort((a, b) => parseFloat(b.total_hours || 0) - parseFloat(a.total_hours || 0))
+      .slice(0, 8);
+
+    equipmentChartInstance = new Chart(equipmentCtx, {
+      type: 'bar',
+      data: {
+        labels: sortedEquipment.map(e => e.equipment_name.length > 15 ? e.equipment_name.substring(0, 15) + '...' : e.equipment_name),
+        datasets: [{
+          label: '사용시간 (h)',
+          data: sortedEquipment.map(e => parseFloat(e.total_hours || 0).toFixed(1)),
+          backgroundColor: colors.slice(0, sortedEquipment.length),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: '시간 (h)' } }
+        }
+      }
+    });
+  }
+
+  // User chart (doughnut)
+  const userCtx = document.getElementById('userChart');
+  if (userCtx && stats.userStats && stats.userStats.length > 0) {
+    if (userChartInstance) userChartInstance.destroy();
+
+    const sortedUsers = [...stats.userStats]
+      .sort((a, b) => parseFloat(b.total_hours || 0) - parseFloat(a.total_hours || 0))
+      .slice(0, 6);
+
+    userChartInstance = new Chart(userCtx, {
+      type: 'doughnut',
+      data: {
+        labels: sortedUsers.map(u => u.username),
+        datasets: [{
+          data: sortedUsers.map(u => parseFloat(u.total_hours || 0).toFixed(1)),
+          backgroundColor: colors.slice(0, sortedUsers.length),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { boxWidth: 12 } }
+        }
+      }
+    });
   }
 };
 
