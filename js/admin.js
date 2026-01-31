@@ -275,15 +275,15 @@ window.editEquipment = async (id) => {
 
     if (displayImage && previewContainer && previewImg) {
       previewImg.src = displayImage;
-      previewImg.style.display = 'block';
+      previewImg.style.setProperty('display', 'block', 'important');
       const placeholder = document.getElementById('imagePreviewPlaceholder');
       if (placeholder) placeholder.style.display = 'none';
       previewImg.onerror = () => {
-        previewImg.style.display = 'none';
+        previewImg.style.setProperty('display', 'none', 'important');
         if (placeholder) placeholder.style.display = 'block';
       };
     } else if (previewContainer && previewImg) {
-      previewImg.style.display = 'none';
+      previewImg.style.setProperty('display', 'none', 'important');
       const placeholder = document.getElementById('imagePreviewPlaceholder');
       if (placeholder) placeholder.style.display = 'block';
     }
@@ -1327,14 +1327,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (url && previewImg) {
         previewImg.src = url;
-        previewImg.style.display = 'block';
+        previewImg.style.setProperty('display', 'block', 'important');
         if (placeholder) placeholder.style.display = 'none';
         previewImg.onerror = () => {
-          previewImg.style.display = 'none';
+          previewImg.style.setProperty('display', 'none', 'important');
           if (placeholder) placeholder.style.display = 'block';
         };
       } else if (previewImg) {
-        previewImg.style.display = 'none';
+        previewImg.style.setProperty('display', 'none', 'important');
         if (placeholder) placeholder.style.display = 'block';
       }
     });
@@ -1352,7 +1352,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (event) => {
           previewImg.src = event.target.result;
-          previewImg.style.display = 'block';
+          previewImg.style.setProperty('display', 'block', 'important');
           if (placeholder) placeholder.style.display = 'none';
         };
         reader.readAsDataURL(file);
