@@ -897,7 +897,10 @@ const loadPermissions = async (equipmentId) => {
               <option value="manager" ${p.permission_level === 'manager' ? 'selected' : ''}>장비담당</option>
             </select>
           </td>
-          <td>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
+          <td>
+            <small>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</small>
+            ${p.updated_at ? `<br><small class="text-primary">변경: ${new Date(p.updated_at).toLocaleDateString('ko-KR')}</small>` : ''}
+          </td>
           <td>
             <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${equipmentId}, ${p.user_id})">
               <i class="bi bi-x"></i>
