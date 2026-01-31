@@ -360,28 +360,37 @@
                 <div class="mb-3">
                   <label for="equipmentImageFile" class="form-label">또는 이미지 파일 업로드</label>
                   <input type="file" class="form-control" id="equipmentImageFile" accept="image/*">
+                  <div id="imagePreview" class="mt-2" style="display:none;">
+                    <img id="previewImg" src="" alt="미리보기" class="img-thumbnail" style="max-height:120px;">
+                  </div>
                 </div>
 
                 <!-- 문서 업로드 섹션 -->
                 <hr>
                 <h6 class="mb-3"><i class="bi bi-file-earmark-pdf"></i> 문서 파일</h6>
 
-                <div class="mb-3">
-                  <label for="equipmentBrochure" class="form-label">장비 소개 자료 (PDF)</label>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="equipmentBrochure" class="form-label mb-0">장비 소개 자료</label>
+                    <span id="currentBrochure"></span>
+                  </div>
                   <input type="file" class="form-control form-control-sm" id="equipmentBrochure" accept=".pdf">
-                  <small class="text-muted" id="currentBrochure"></small>
                 </div>
 
-                <div class="mb-3">
-                  <label for="equipmentManual" class="form-label">매뉴얼 (PDF)</label>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="equipmentManual" class="form-label mb-0">매뉴얼</label>
+                    <span id="currentManual"></span>
+                  </div>
                   <input type="file" class="form-control form-control-sm" id="equipmentManual" accept=".pdf">
-                  <small class="text-muted" id="currentManual"></small>
                 </div>
 
-                <div class="mb-3">
-                  <label for="equipmentQuickGuide" class="form-label">간단 매뉴얼 (PDF)</label>
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="equipmentQuickGuide" class="form-label mb-0">간단 매뉴얼</label>
+                    <span id="currentQuickGuide"></span>
+                  </div>
                   <input type="file" class="form-control form-control-sm" id="equipmentQuickGuide" accept=".pdf">
-                  <small class="text-muted" id="currentQuickGuide"></small>
                 </div>
               </div>
             </div>

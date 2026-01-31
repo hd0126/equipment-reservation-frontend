@@ -244,28 +244,42 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentStatus').value = equipment.status;
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 현재 문서 파일 표시 (삭제 버튼 포함)
+    // 이미지 미리보기 표시
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    if (equipment.image_url) {
+      previewImg.src = equipment.image_url;
+      imagePreview.style.display = 'block';
+    } else {
+      imagePreview.style.display = 'none';
+    }
+
+    // 현재 문서 파일 표시 (컴팩트한 조회/삭제 버튼)
+    const renderDocButtons = (url, docType, equipId) => {
+      if (!url) return '';
+      return `
+        <a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-1" title="조회">
+          <i class="bi bi-eye"></i>
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1" 
+                onclick="handleDeleteDocument(${equipId}, '${docType}', '${url}')" title="삭제">
+          <i class="bi bi-trash"></i>
+        </button>
+      `;
+    };
+
     const currentBrochure = document.getElementById('currentBrochure');
     const currentManual = document.getElementById('currentManual');
     const currentQuickGuide = document.getElementById('currentQuickGuide');
 
     if (currentBrochure) {
-      currentBrochure.innerHTML = equipment.brochure_url
-        ? `<a href="${equipment.brochure_url}" target="_blank">📄 현재 파일 보기</a>
-           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'brochure', '${equipment.brochure_url}')">❌ 삭제</button>`
-        : '';
+      currentBrochure.innerHTML = renderDocButtons(equipment.brochure_url, 'brochure', equipment.id);
     }
     if (currentManual) {
-      currentManual.innerHTML = equipment.manual_url
-        ? `<a href="${equipment.manual_url}" target="_blank">📄 현재 파일 보기</a>
-           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'manual', '${equipment.manual_url}')">❌ 삭제</button>`
-        : '';
+      currentManual.innerHTML = renderDocButtons(equipment.manual_url, 'manual', equipment.id);
     }
     if (currentQuickGuide) {
-      currentQuickGuide.innerHTML = equipment.quick_guide_url
-        ? `<a href="${equipment.quick_guide_url}" target="_blank">📄 현재 파일 보기</a>
-           <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="handleDeleteDocument(${equipment.id}, 'quick_guide', '${equipment.quick_guide_url}')">❌ 삭제</button>`
-        : '';
+      currentQuickGuide.innerHTML = renderDocButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
     }
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
@@ -1121,4 +1135,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load permission summaries
   loadUserPermissionSummary();
+
+  // Image preview handlers
+  const imageUrlInput = document.getElementById('equipmentImageUrl');
+  const imageFileInput = document.getElementById('equipmentImageFile');
+  const imagePreview = document.getElementById('imagePreview');
+  const previewImg = document.getElementById('previewImg');
+
+  if (imageUrlInput && imagePreview && previewImg) {
+    // URL 입력 시 미리보기
+    imageUrlInput.addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      if (url) {
+        previewImg.src = url;
+        imagePreview.style.display = 'block';
+        previewImg.onerror = () => {
+          imagePreview.style.display = 'none';
+        };
+      } else {
+        imagePreview.style.display = 'none';
+      }
+    });
+  }
+
+  if (imageFileInput && imagePreview && previewImg) {
+    // 파일 선택 시 미리보기
+    imageFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          previewImg.src = event.target.result;
+          imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 });
