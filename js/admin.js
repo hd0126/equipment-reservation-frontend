@@ -3,6 +3,7 @@
 // Check if current user is equipment manager (not admin)
 let isEquipmentManager = false;
 let managedEquipmentIds = [];
+let allReservations = [];
 
 // Initialize equipment manager status
 const initManagerStatus = async () => {
@@ -22,10 +23,17 @@ const initManagerStatus = async () => {
 // Load dashboard stats
 const loadDashboardStats = async () => {
   try {
-    const [equipment, reservations] = await Promise.all([
-      getEquipment(),
-      getReservations()
-    ]);
+    let equipment = await getEquipment();
+    let reservations;
+
+    const user = getCurrentUser();
+    // 장비담당자이면 담당 장비만 필터링
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      equipment = equipment.filter(e => managedEquipmentIds.includes(e.id));
+      reservations = await apiRequest('/reservations/manager');
+    } else {
+      reservations = await getReservations();
+    }
 
     const now = new Date();
     const activeReservations = reservations.filter(r =>
@@ -54,7 +62,15 @@ let lastStatsData = null;
 // Load detailed statistics with optional date range
 const loadStatistics = async (startDate, endDate) => {
   try {
-    let url = '/stats';
+    const user = getCurrentUser();
+    // 장비담당자이면 제한된 통계 API 호출
+    let url;
+    if (user && user.user_role !== 'admin' && isEquipmentManager) {
+      url = '/stats/manager';
+    } else {
+      url = '/stats';
+    }
+
     if (startDate && endDate) {
       url += `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
     }
@@ -818,6 +834,98 @@ window.applyStatsPeriod = () => {
   loadStatistics(startDate, endDate);
 };
 
+// Quick period selector for reservation/stats (combined interface)
+window.setQuickPeriod = (period) => {
+  const startInput = document.getElementById('reservationStartFilter');
+  const endInput = document.getElementById('reservationEndFilter');
+  if (!startInput || !endInput) return;
+
+  const now = new Date();
+  let start, end;
+
+  switch (period) {
+    case 'thisMonth':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      break;
+    case 'lastMonth':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 0);
+      break;
+    case 'last3Months':
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      break;
+    case 'thisYear':
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31);
+      break;
+    case 'all':
+      startInput.value = '';
+      endInput.value = '';
+      filterReservations();
+      loadStatistics();
+      return;
+  }
+
+  startInput.value = start.toISOString().split('T')[0];
+  endInput.value = end.toISOString().split('T')[0];
+  filterReservations();
+  loadStatistics(startInput.value, endInput.value);
+};
+
+// Clear all reservation filters
+window.clearReservationFilters = () => {
+  document.getElementById('reservationStartFilter').value = '';
+  document.getElementById('reservationEndFilter').value = '';
+  document.getElementById('reservationEquipmentFilter').value = '';
+  document.getElementById('reservationUserFilter').value = '';
+  const statusFilter = document.getElementById('reservationStatusFilter');
+  if (statusFilter) statusFilter.value = '';
+  filterReservations();
+  loadStatistics();
+};
+
+// Refresh all reservation and stats data
+window.refreshReservationStats = () => {
+  loadReservationManagement();
+  const startDate = document.getElementById('reservationStartFilter')?.value || null;
+  const endDate = document.getElementById('reservationEndFilter')?.value || null;
+  loadStatistics(startDate, endDate);
+};
+
+// Filter reservations based on selected filters
+window.filterReservations = () => {
+  const equipmentFilter = document.getElementById('reservationEquipmentFilter')?.value;
+  const userFilter = document.getElementById('reservationUserFilter')?.value;
+  const startFilter = document.getElementById('reservationStartFilter')?.value;
+  const endFilter = document.getElementById('reservationEndFilter')?.value;
+  const statusFilter = document.getElementById('reservationStatusFilter')?.value;
+
+  let filtered = [...allReservations];
+
+  if (equipmentFilter) {
+    filtered = filtered.filter(r => r.equipment_id == equipmentFilter);
+  }
+  if (userFilter) {
+    filtered = filtered.filter(r => r.user_id == userFilter);
+  }
+  if (startFilter) {
+    const startDate = new Date(startFilter);
+    filtered = filtered.filter(r => new Date(r.start_time) >= startDate);
+  }
+  if (endFilter) {
+    const endDate = new Date(endFilter);
+    endDate.setHours(23, 59, 59);
+    filtered = filtered.filter(r => new Date(r.start_time) <= endDate);
+  }
+  if (statusFilter) {
+    filtered = filtered.filter(r => r.status === statusFilter);
+  }
+
+  renderReservationTable(filtered);
+};
+
 // Excel export
 window.exportStatsToExcel = () => {
   if (!lastStatsData) {
@@ -862,8 +970,8 @@ window.exportStatsToExcel = () => {
   // Generate filename with date
   const now = new Date();
   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const startDate = document.getElementById('statsStartDate')?.value;
-  const endDate = document.getElementById('statsEndDate')?.value;
+  const startDate = document.getElementById('reservationStartFilter')?.value;
+  const endDate = document.getElementById('reservationEndFilter')?.value;
   let fileName;
   if (startDate && endDate) {
     fileName = `장비예약통계_${startDate}_${endDate}.xlsx`;
@@ -875,9 +983,20 @@ window.exportStatsToExcel = () => {
 };
 
 // Initialize admin page
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check admin access
-  requireAdmin();
+  const hasAccess = await requireAdmin();
+  if (!hasAccess) return;
+
+  // Initialize manager status first
+  await initManagerStatus();
+
+  // Hide user management section for equipment managers
+  const user = getCurrentUser();
+  if (user && user.user_role !== 'admin' && isEquipmentManager) {
+    const userMgmtSection = document.getElementById('userManagementSection');
+    if (userMgmtSection) userMgmtSection.style.display = 'none';
+  }
 
   // Load all data
   loadDashboardStats();
@@ -1111,8 +1230,6 @@ const exportUsers = async () => {
 };
 
 // ===== Reservation Filter Functions =====
-
-let allReservations = [];
 
 // Populate filter dropdowns
 const populateReservationFilters = async () => {
