@@ -416,14 +416,21 @@
             </div>
             <div class="card-body p-2">
               <div class="row g-2">
-                <div class="col-md-8">
+                <div class="col-md-5">
                   <select class="form-select form-select-sm" id="permissionUserSelect">
                     <option value="">사용자 선택...</option>
                   </select>
                 </div>
                 <div class="col-md-4">
+                  <select class="form-select form-select-sm" id="permissionLevelSelect">
+                    <option value="normal">일반 (승인 필요)</option>
+                    <option value="autonomous">자율 (즉시 승인)</option>
+                    <option value="manager">장비담당 (권한 관리)</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
                   <button class="btn btn-primary btn-sm w-100" onclick="grantPermission()">
-                    <i class="bi bi-plus"></i> 권한 부여
+                    <i class="bi bi-plus"></i> 부여
                   </button>
                 </div>
               </div>
@@ -443,9 +450,9 @@
                     <tr>
                       <th>사용자</th>
                       <th>소속</th>
-                      <th>신분</th>
+                      <th>권한</th>
                       <th>부여일</th>
-                      <th>작업</th>
+                      <th>취소</th>
                     </tr>
                   </thead>
                   <tbody id="permissionList">

@@ -666,6 +666,26 @@ const getUserRoleLabel = (role) => {
   return labels[role] || role || '-';
 };
 
+// Get permission level label
+const getPermissionLevelLabel = (level) => {
+  const labels = {
+    'normal': '일반',
+    'autonomous': '자율',
+    'manager': '장비담당'
+  };
+  return labels[level] || '일반';
+};
+
+// Get permission level badge class
+const getPermissionLevelBadge = (level) => {
+  const classes = {
+    'normal': 'bg-secondary',
+    'autonomous': 'bg-success',
+    'manager': 'bg-warning text-dark'
+  };
+  return classes[level] || 'bg-secondary';
+};
+
 // Open permission management modal
 const openPermissionModal = async (equipmentId, equipmentName) => {
   document.getElementById('permissionEquipmentId').value = equipmentId;
@@ -690,13 +710,20 @@ const loadPermissions = async (equipmentId) => {
     if (countBadge) countBadge.textContent = `${permissions.length}명`;
 
     if (permissions.length === 0) {
-      container.innerHTML = '<tr><td colspan="5" class="text-center text-muted">권한자 없음</td></tr>';
+      container.innerHTML = '<tr><td colspan="6" class="text-center text-muted">권한자 없음</td></tr>';
     } else {
       container.innerHTML = permissions.map(p => `
         <tr>
           <td>${p.username}</td>
           <td>${getDepartmentLabel(p.department)}</td>
-          <td>${getUserRoleLabel(p.user_role)}</td>
+          <td>
+            <select class="form-select form-select-sm" style="width: 100px;" 
+                    onchange="updatePermissionLevel(${equipmentId}, ${p.user_id}, this.value)">
+              <option value="normal" ${p.permission_level === 'normal' ? 'selected' : ''}>일반</option>
+              <option value="autonomous" ${p.permission_level === 'autonomous' ? 'selected' : ''}>자율</option>
+              <option value="manager" ${p.permission_level === 'manager' ? 'selected' : ''}>장비담당</option>
+            </select>
+          </td>
           <td>${new Date(p.granted_at).toLocaleDateString('ko-KR')}</td>
           <td>
             <button class="btn btn-sm btn-outline-danger" onclick="revokePermission(${equipmentId}, ${p.user_id})">
@@ -707,7 +734,7 @@ const loadPermissions = async (equipmentId) => {
       `).join('');
     }
   } catch (error) {
-    container.innerHTML = `<tr><td colspan="5" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
+    container.innerHTML = `<tr><td colspan="6" class="text-center text-danger">로드 실패: ${error.message}</td></tr>`;
     if (countBadge) countBadge.textContent = '0명';
   }
 };
@@ -729,6 +756,7 @@ const loadPermissionCandidates = async (equipmentId) => {
 const grantPermission = async () => {
   const equipmentId = document.getElementById('permissionEquipmentId').value;
   const userId = document.getElementById('permissionUserSelect').value;
+  const permissionLevel = document.getElementById('permissionLevelSelect')?.value || 'normal';
 
   if (!userId) {
     alert('사용자를 선택해주세요.');
@@ -738,7 +766,7 @@ const grantPermission = async () => {
   try {
     await apiRequest(`/permissions/equipment/${equipmentId}/grant`, {
       method: 'POST',
-      body: JSON.stringify({ userId: parseInt(userId) })
+      body: JSON.stringify({ userId: parseInt(userId), permissionLevel })
     });
 
     // Refresh lists
@@ -746,6 +774,20 @@ const grantPermission = async () => {
     await loadPermissionCandidates(equipmentId);
   } catch (error) {
     alert('권한 부여 실패: ' + error.message);
+  }
+};
+
+// Update permission level
+const updatePermissionLevel = async (equipmentId, userId, permissionLevel) => {
+  try {
+    await apiRequest(`/permissions/equipment/${equipmentId}/user/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissionLevel })
+    });
+  } catch (error) {
+    alert('권한 수정 실패: ' + error.message);
+    // Reload to reset select
+    await loadPermissions(equipmentId);
   }
 };
 
