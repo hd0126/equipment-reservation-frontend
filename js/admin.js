@@ -130,7 +130,7 @@ const loadEquipmentManagement = async () => {
             : '<span class="text-muted">-</span>'}
             </td>
             <td>
-              <span class="badge bg-primary" onclick="openPermissionModal(${e.id}, '${e.name}')" style="cursor:pointer;" title="권한 관리">
+              <span class="badge bg-primary">
                 ${permCount}명
               </span>
             </td>
@@ -276,16 +276,11 @@ window.editEquipment = async (id) => {
     if (displayImage && previewContainer && previewImg) {
       previewImg.src = displayImage;
       previewImg.style.display = 'block';
-      const placeholder = document.getElementById('imagePreviewPlaceholder');
-      if (placeholder) placeholder.style.display = 'none';
       previewImg.onerror = () => {
         previewImg.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'block';
       };
-    } else if (previewContainer) {
+    } else if (previewContainer && previewImg) {
       previewImg.style.display = 'none';
-      const placeholder = document.getElementById('imagePreviewPlaceholder');
-      if (placeholder) placeholder.style.display = 'block';
     }
 
     // 문서 조회/삭제 버튼 렌더링 함수
