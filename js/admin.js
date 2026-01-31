@@ -1291,23 +1291,30 @@ const revokePermission = async (equipmentId, userId) => {
 // Export equipment to Excel
 const exportEquipment = async () => {
   try {
+    if (typeof XLSX === 'undefined') {
+      alert('엑셀 라이브러리가 로드되지 않았습니다.');
+      return;
+    }
+
     const equipment = await getEquipment();
     if (equipment.length === 0) {
       alert('내보낼 장비가 없습니다.');
       return;
     }
 
-    let csvContent = '\uFEFFID,장비명,위치,상태,설명\n';
-    equipment.forEach(e => {
-      const status = e.status === 'available' ? '사용가능' : (e.status === 'maintenance' ? '점검중' : '사용불가');
-      csvContent += `${e.id},"${e.name || ''}","${e.location || ''}","${status}","${(e.description || '').replace(/"/g, '""')}"\n`;
-    });
+    const data = equipment.map(e => ({
+      'ID': e.id,
+      '장비명': e.name || '',
+      '위치': e.location || '',
+      '담당자': e.manager_name || '',
+      '상태': e.status === 'available' ? '사용가능' : (e.status === 'maintenance' ? '점검중' : '사용불가'),
+      '설명': e.description || ''
+    }));
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `장비목록_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, '장비목록');
+    XLSX.writeFile(wb, `장비목록_${new Date().toISOString().split('T')[0]}.xlsx`);
   } catch (error) {
     alert('장비 내보내기 실패: ' + error.message);
   }
@@ -1316,26 +1323,33 @@ const exportEquipment = async () => {
 // Export users to Excel
 const exportUsers = async () => {
   try {
-    const data = await apiRequest('/permissions/summary');
-    const users = data.userSummary || [];
+    if (typeof XLSX === 'undefined') {
+      alert('엑셀 라이브러리가 로드되지 않았습니다.');
+      return;
+    }
+
+    const dataResponse = await apiRequest('/permissions/summary');
+    const users = dataResponse.userSummary || [];
     if (users.length === 0) {
       alert('내보낼 사용자가 없습니다.');
       return;
     }
 
-    let csvContent = '\uFEFFID,사용자,소속,구분,연락처,가입일,활용장비수\n';
-    users.forEach(u => {
-      const dept = getDepartmentLabel(u.department);
-      const role = getUserRoleLabel(u.user_role);
-      const date = u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-';
-      csvContent += `${u.id},"${u.username}","${dept}","${role}","${u.phone || '-'}","${date}",${u.permission_count}\n`;
-    });
+    const data = users.map(u => ({
+      'ID': u.id,
+      '사용자': u.username,
+      '이메일': u.email || '',
+      '소속': getDepartmentLabel(u.department),
+      '구분': getUserRoleLabel(u.user_role),
+      '연락처': u.phone || '-',
+      '가입일': u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-',
+      '활용장비수': u.permission_count || 0
+    }));
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `사용자목록_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, '사용자목록');
+    XLSX.writeFile(wb, `사용자목록_${new Date().toISOString().split('T')[0]}.xlsx`);
   } catch (error) {
     alert('사용자 내보내기 실패: ' + error.message);
   }
@@ -1419,6 +1433,9 @@ const clearReservationFilters = () => {
 const loadUserPermissionSummary = async () => {
   const container = document.getElementById('userPermissionSummary');
   if (!container) return;
+
+  // Show loading state
+  container.innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">로딩...</span></div></td></tr>';
 
   try {
     const user = getCurrentUser();
