@@ -1,10 +1,11 @@
 let calendar = null;
 let currentEquipmentFilter = null;
+let permittedEquipment = []; // Equipment user has permission to use
 
 // Initialize calendar
 const initCalendar = () => {
   const calendarEl = document.getElementById('calendar');
-  
+
   calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
     headerToolbar: {
@@ -20,8 +21,11 @@ const initCalendar = () => {
       day: '일'
     },
     height: 'auto',
+    selectable: true, // Enable date/time selection
+    selectMirror: true,
     events: loadCalendarEvents,
     eventClick: handleEventClick,
+    select: handleDateSelect, // Handle date/time selection
     eventColor: '#0d6efd',
     eventTimeFormat: {
       hour: '2-digit',
@@ -29,8 +33,40 @@ const initCalendar = () => {
       hour12: false
     }
   });
-  
+
   calendar.render();
+};
+
+// Handle date/time selection for new reservation
+const handleDateSelect = (info) => {
+  // Check if equipment is selected
+  if (!currentEquipmentFilter) {
+    alert('예약할 장비를 먼저 선택해주세요.');
+    calendar.unselect();
+    return;
+  }
+
+  // Check if user has permission for this equipment
+  const hasPermission = permittedEquipment.some(e => e.id === currentEquipmentFilter);
+  if (!hasPermission) {
+    alert('해당 장비에 대한 예약 권한이 없습니다.');
+    calendar.unselect();
+    return;
+  }
+
+  // Get selected equipment info
+  const selectedEquipment = permittedEquipment.find(e => e.id === currentEquipmentFilter);
+
+  // Redirect to index page with reservation modal (or open modal directly if available)
+  if (typeof openReservationModal === 'function') {
+    // If on index page, the function is available
+    openReservationModal(currentEquipmentFilter);
+  } else {
+    // Redirect to index with equipment ID
+    window.location.href = `index.html?reserveEquipment=${currentEquipmentFilter}&date=${info.startStr.split('T')[0]}`;
+  }
+
+  calendar.unselect();
 };
 
 // Load calendar events
@@ -38,15 +74,15 @@ const loadCalendarEvents = async (info, successCallback, failureCallback) => {
   try {
     const start = info.start.toISOString();
     const end = info.end.toISOString();
-    
+
     const reservations = await getReservationsByRange(start, end);
-    
+
     // Filter by equipment if selected
     let filteredReservations = reservations;
     if (currentEquipmentFilter) {
       filteredReservations = reservations.filter(r => r.equipment_id === currentEquipmentFilter);
     }
-    
+
     // Convert to FullCalendar event format
     const events = filteredReservations.map(r => ({
       id: r.id,
@@ -65,7 +101,7 @@ const loadCalendarEvents = async (info, successCallback, failureCallback) => {
       backgroundColor: getEventColor(r.status),
       borderColor: getEventColor(r.status)
     }));
-    
+
     successCallback(events);
   } catch (error) {
     console.error('Failed to load calendar events:', error);
@@ -87,21 +123,21 @@ const getEventColor = (status) => {
 const handleEventClick = (info) => {
   const props = info.event.extendedProps;
   const user = getUser();
-  
+
   const statusClass = `status-${props.status}`;
   const statusText = {
     'confirmed': '확정',
     'pending': '대기',
     'cancelled': '취소됨'
   }[props.status];
-  
+
   const modalTitle = document.getElementById('eventModalLabel');
   const modalBody = document.getElementById('eventDetailsBody');
-  
+
   modalTitle.textContent = props.equipmentName;
-  
+
   const canCancel = user && (user.email === props.email || user.role === 'admin') && props.status !== 'cancelled';
-  
+
   modalBody.innerHTML = `
     <div class="mb-3">
       <h6><i class="bi bi-gear"></i> 장비</h6>
@@ -139,7 +175,7 @@ const handleEventClick = (info) => {
       </button>
     ` : ''}
   `;
-  
+
   const modal = new bootstrap.Modal(document.getElementById('eventModal'));
   modal.show();
 };
@@ -149,37 +185,80 @@ const handleCancelReservationFromCalendar = async (reservationId) => {
   if (!confirm('예약을 취소하시겠습니까?')) {
     return;
   }
-  
+
   try {
     await cancelReservation(reservationId);
-    
+
     // Close modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
     modal.hide();
-    
+
     // Reload calendar
     calendar.refetchEvents();
-    
+
     alert('예약이 취소되었습니다.');
   } catch (error) {
     alert('예약 취소 실패: ' + error.message);
   }
 };
 
-// Load equipment filter options
+// Load equipment filter options (filtered by user permissions)
 const loadEquipmentFilter = async () => {
   try {
-    const equipment = await getEquipment();
+    const user = getCurrentUser();
     const select = document.getElementById('equipmentFilter');
-    
-    select.innerHTML = '<option value="">전체 장비</option>';
-    equipment.forEach(e => {
-      const option = document.createElement('option');
-      option.value = e.id;
-      option.textContent = e.name;
-      select.appendChild(option);
-    });
-    
+
+    // Get all equipment first
+    const allEquipment = await getEquipment();
+
+    // Filter equipment based on user permissions
+    if (user && (user.user_role === 'admin' || user.user_role === 'equipment_manager')) {
+      // Admin and equipment managers can see all equipment
+      permittedEquipment = allEquipment;
+    } else if (user) {
+      // Regular users - get their permitted equipment
+      try {
+        const myPermissions = await apiRequest('/permissions/my');
+        const permittedIds = myPermissions.map(p => p.equipment_id);
+        permittedEquipment = allEquipment.filter(e => permittedIds.includes(e.id));
+      } catch (e) {
+        console.log('Could not fetch permissions, showing all equipment for viewing');
+        permittedEquipment = allEquipment;
+      }
+    } else {
+      permittedEquipment = allEquipment;
+    }
+
+    // Build select options
+    select.innerHTML = '<option value="">전체 장비 (조회용)</option>';
+
+    if (permittedEquipment.length > 0) {
+      const optGroup = document.createElement('optgroup');
+      optGroup.label = '예약 가능 장비';
+      permittedEquipment.forEach(e => {
+        const option = document.createElement('option');
+        option.value = e.id;
+        option.textContent = e.name;
+        optGroup.appendChild(option);
+      });
+      select.appendChild(optGroup);
+    }
+
+    // Add view-only equipment (not permitted but can view)
+    const viewOnlyEquipment = allEquipment.filter(e => !permittedEquipment.some(p => p.id === e.id));
+    if (viewOnlyEquipment.length > 0) {
+      const viewOptGroup = document.createElement('optgroup');
+      viewOptGroup.label = '조회만 가능';
+      viewOnlyEquipment.forEach(e => {
+        const option = document.createElement('option');
+        option.value = e.id;
+        option.textContent = `${e.name} (조회용)`;
+        option.dataset.viewOnly = 'true';
+        viewOptGroup.appendChild(option);
+      });
+      select.appendChild(viewOptGroup);
+    }
+
     select.addEventListener('change', (e) => {
       currentEquipmentFilter = e.target.value ? parseInt(e.target.value) : null;
       calendar.refetchEvents();
@@ -193,10 +272,11 @@ const loadEquipmentFilter = async () => {
 document.addEventListener('DOMContentLoaded', () => {
   // Check authentication
   requireAuth();
-  
+
   // Initialize calendar
   initCalendar();
-  
+
   // Load equipment filter
   loadEquipmentFilter();
 });
+
