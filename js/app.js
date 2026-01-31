@@ -1,3 +1,14 @@
+/**
+ * Equipment Reservation System (ERS) - Main Application
+ * Version: 1.4.0
+ * 
+ * Global namespace: window.ERS
+ * All API functions are exposed globally for cross-file compatibility.
+ */
+
+// Global namespace for Equipment Reservation System
+window.ERS = window.ERS || {};
+
 // Global variables for index page
 let allEquipment = [];
 let currentFilter = 'all';

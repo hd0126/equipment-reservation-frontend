@@ -1,3 +1,19 @@
+/**
+ * Equipment Reservation System (ERS) - Calendar Module
+ * Version: 1.4.0
+ * 
+ * Dependencies: auth.js, app.js (must be loaded before this file)
+ * Required functions from app.js: checkReservationConflict, createReservation, apiRequest
+ */
+
+// Verify dependencies are loaded
+if (typeof apiRequest === 'undefined') {
+  console.error('[ERS Calendar] Error: auth.js must be loaded before calendar.js');
+}
+if (typeof checkReservationConflict === 'undefined') {
+  console.error('[ERS Calendar] Error: app.js must be loaded before calendar.js');
+}
+
 let calendar = null;
 let currentEquipmentFilter = null;
 let permittedEquipment = []; // Equipment user has permission to use
@@ -447,7 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert('예약이 완료되었습니다!');
       } catch (error) {
-        alert('예약 실패: ' + error.message);
+        console.error('[ERS Calendar] Reservation error:', error);
+        let userMessage = '예약 처리 중 오류가 발생했습니다.';
+        if (error.message.includes('conflict')) {
+          userMessage = '선택한 시간에 이미 예약이 있습니다.';
+        } else if (error.message.includes('permission')) {
+          userMessage = '해당 장비에 대한 예약 권한이 없습니다.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          userMessage = '네트워크 연결을 확인해주세요.';
+        } else if (error.message) {
+          userMessage = error.message;
+        }
+        alert('예약 실패: ' + userMessage);
       }
     });
   }

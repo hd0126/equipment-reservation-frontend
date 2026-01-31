@@ -1,5 +1,12 @@
-// Admin page functions
+/**
+ * Equipment Reservation System (ERS) - Admin Module
+ * Version: 1.4.0
+ * 
+ * Dependencies: auth.js, app.js (must be loaded before this file)
+ * Features: Dashboard, Equipment Management, User Management, Statistics
+ */
 
+// Admin page functions
 // Check if current user is equipment manager (not admin)
 let isEquipmentManager = false;
 let managedEquipmentIds = [];
