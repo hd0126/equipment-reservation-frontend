@@ -1316,4 +1316,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load permission summaries
   loadUserPermissionSummary();
+
+  // 이미지 URL 입력 시 즉시 미리보기
+  const imageUrlInput = document.getElementById('equipmentImageUrl');
+  if (imageUrlInput) {
+    imageUrlInput.addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const previewImg = document.getElementById('imagePreview');
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+
+      if (url && previewImg) {
+        previewImg.src = url;
+        previewImg.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        previewImg.onerror = () => {
+          previewImg.style.display = 'none';
+          if (placeholder) placeholder.style.display = 'block';
+        };
+      } else if (previewImg) {
+        previewImg.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+      }
+    });
+  }
+
+  // 이미지 파일 선택 시 즉시 미리보기
+  const imageFileInput = document.getElementById('equipmentImageFile');
+  if (imageFileInput) {
+    imageFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const previewImg = document.getElementById('imagePreview');
+      const placeholder = document.getElementById('imagePreviewPlaceholder');
+
+      if (file && previewImg) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          previewImg.src = event.target.result;
+          previewImg.style.display = 'block';
+          if (placeholder) placeholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 });
