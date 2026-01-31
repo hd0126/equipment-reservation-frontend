@@ -41,7 +41,7 @@ const initCalendar = () => {
 const handleDateSelect = (info) => {
   // Check if equipment is selected
   if (!currentEquipmentFilter) {
-    alert('예약할 장비를 먼저 선택해주세요.');
+    alert('예약할 장비를 먼저 선택해주세요.\n\n우측 상단에서 장비를 선택 후 날짜를 클릭하세요.');
     calendar.unselect();
     return;
   }
@@ -57,16 +57,51 @@ const handleDateSelect = (info) => {
   // Get selected equipment info
   const selectedEquipment = permittedEquipment.find(e => e.id === currentEquipmentFilter);
 
-  // Redirect to index page with reservation modal (or open modal directly if available)
-  if (typeof openReservationModal === 'function') {
-    // If on index page, the function is available
-    openReservationModal(currentEquipmentFilter);
-  } else {
-    // Redirect to index with equipment ID
-    window.location.href = `index.html?reserveEquipment=${currentEquipmentFilter}&date=${info.startStr.split('T')[0]}`;
-  }
+  // Open calendar reservation modal
+  openCalendarReservationModal(selectedEquipment, info);
 
   calendar.unselect();
+};
+
+// Open calendar reservation modal
+const openCalendarReservationModal = (equipment, info) => {
+  // Set equipment info
+  document.getElementById('calReservationEquipmentId').value = equipment.id;
+  document.getElementById('calSelectedEquipmentName').textContent = equipment.name;
+
+  // Get selected date
+  const selectedDate = info.startStr.split('T')[0];
+  document.getElementById('calReservationDate').value = selectedDate;
+  document.getElementById('calSelectedDate').textContent = new Date(selectedDate).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+  });
+
+  // Generate time options
+  const timeSelect = document.getElementById('calStartTime');
+  timeSelect.innerHTML = '';
+  for (let h = 8; h <= 21; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hour = h.toString().padStart(2, '0');
+      const min = m.toString().padStart(2, '0');
+      const option = document.createElement('option');
+      option.value = `${hour}:${min}`;
+      option.textContent = `${hour}:${min}`;
+      timeSelect.appendChild(option);
+    }
+  }
+
+  // If time was selected in week/day view, set it
+  if (info.startStr.includes('T')) {
+    const time = info.startStr.split('T')[1].substring(0, 5);
+    timeSelect.value = time;
+  }
+
+  // Reset purpose
+  document.getElementById('calPurpose').value = '';
+
+  // Show modal
+  const modal = new bootstrap.Modal(document.getElementById('calendarReservationModal'));
+  modal.show();
 };
 
 // Load calendar events
@@ -278,5 +313,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load equipment filter
   loadEquipmentFilter();
-});
 
+  // Setup calendar reservation form
+  const calForm = document.getElementById('calendarReservationForm');
+  if (calForm) {
+    calForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const equipmentId = document.getElementById('calReservationEquipmentId').value;
+      const date = document.getElementById('calReservationDate').value;
+      const startTime = document.getElementById('calStartTime').value;
+      const duration = parseInt(document.getElementById('calDuration').value);
+      const purpose = document.getElementById('calPurpose').value;
+
+      // Calculate end time
+      const startDateTime = new Date(`${date}T${startTime}`);
+      const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+
+      try {
+        // Check for conflicts
+        const conflict = await checkReservationConflict(
+          equipmentId,
+          startDateTime.toISOString(),
+          endDateTime.toISOString()
+        );
+
+        if (conflict.hasConflict) {
+          alert('선택한 시간에 이미 예약이 있습니다.\n다른 시간을 선택해주세요.');
+          return;
+        }
+
+        // Create reservation
+        await createReservation({
+          equipment_id: parseInt(equipmentId),
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          purpose: purpose
+        });
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('calendarReservationModal'));
+        modal.hide();
+
+        // Refresh calendar
+        calendar.refetchEvents();
+
+        alert('예약이 완료되었습니다!');
+      } catch (error) {
+        alert('예약 실패: ' + error.message);
+      }
+    });
+  }
+});
