@@ -253,13 +253,13 @@ window.editEquipment = async (id) => {
     document.getElementById('equipmentLocation').value = equipment.location || '';
     document.getElementById('equipmentStatus').value = equipment.status;
 
-    // 이미지 URL 필드: 직접 입력한 URL만 표시 (image_url)
+    // 이미지 URL 필드 및 미리보기
     document.getElementById('equipmentImageUrl').value = equipment.image_url || '';
 
-    // 이미지 미리보기: image_file_url (R2 업로드) 우선, 없으면 image_url 사용
+    // 이미지 미리보기
     const previewContainer = document.getElementById('imagePreviewContainer');
     const previewImg = document.getElementById('imagePreview');
-    const displayImage = equipment.image_file_url || equipment.image_url;
+    const displayImage = equipment.image_url;
 
     if (displayImage && previewContainer && previewImg) {
       previewImg.src = displayImage;
@@ -300,9 +300,10 @@ window.editEquipment = async (id) => {
     if (currentQuickGuide) {
       currentQuickGuide.innerHTML = renderDocButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
     }
-    // 이미지 파일 조회/삭제 버튼 (image_file_url이 있을 때만)
+    // 이미지 조회/삭제 버튼 (R2 업로드 이미지일 때만)
     if (currentImageFile) {
-      currentImageFile.innerHTML = renderDocButtons(equipment.image_file_url, 'image', equipment.id);
+      const isR2Image = equipment.image_url && equipment.image_url.includes('r2.dev');
+      currentImageFile.innerHTML = isR2Image ? renderDocButtons(equipment.image_url, 'image', equipment.id) : '';
     }
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';
@@ -526,15 +527,14 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('[DEBUG] Final newImageFileUrl:', newImageFileUrl);
 
           // Build update data
-          // image_url: 직접 입력한 URL (imageUrl 필드 값)
-          // image_file_url: R2에 업로드한 파일 URL
+          // 파일 업로드가 있으면 image_url에 저장, 없으면 직접 입력 URL 사용
+          const finalImageUrl = newImageFileUrl || imageUrl || existingEquipment.image_url;
           const data = {
             name,
             description,
             location,
             status,
-            image_url: imageUrl, // 직접 입력 URL
-            image_file_url: newImageFileUrl, // R2 업로드 URL
+            image_url: finalImageUrl, // 파일 업로드 또는 직접 입력 URL
             brochure_url: existingEquipment.brochure_url,
             manual_url: existingEquipment.manual_url,
             quick_guide_url: existingEquipment.quick_guide_url
@@ -589,14 +589,14 @@ document.addEventListener('DOMContentLoaded', () => {
             newImageFileUrl = uploadResult.url;
           }
 
-          // image_url: 직접 입력한 URL, image_file_url: R2 업로드 URL
+          // 파일 업로드가 있으면 image_url에 저장, 없으면 직접 입력 URL 사용
+          const finalImageUrl = newImageFileUrl || imageUrl;
           const data = {
             name,
             description,
             location,
             status,
-            image_url: imageUrl, // 직접 입력 URL
-            image_file_url: newImageFileUrl // R2 업로드 URL
+            image_url: finalImageUrl
           };
           const result = await createEquipment(data);
           savedEquipmentId = result.equipmentId;

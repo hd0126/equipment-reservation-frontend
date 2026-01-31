@@ -91,7 +91,7 @@ const renderEquipmentCard = (equipment) => {
   const statusClass = equipment.status === 'available' ? 'status-available' : 'status-maintenance';
   const statusText = equipment.status === 'available' ? '사용 가능' : '점검 중';
   const defaultImage = 'https://via.placeholder.com/400x200?text=' + encodeURIComponent(equipment.name);
-  const displayImage = equipment.image_file_url || equipment.image_url || defaultImage;
+  const displayImage = equipment.image_url || defaultImage;
 
   return `
     <div class="col-md-6 col-lg-4 mb-4">
