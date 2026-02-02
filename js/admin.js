@@ -812,7 +812,7 @@ window.editEquipment = async (id) => {
     const displayImage = imageFileUrl || equipment.image_url;
 
     if (displayImage && previewContainer && previewImg) {
-      previewImg.src = displayImage;
+      previewImg.src = getProxiedImageUrl(displayImage);
       previewImg.style.setProperty('display', 'block', 'important');
       const placeholder = document.getElementById('imagePreviewPlaceholder');
       if (placeholder) placeholder.style.display = 'none';
@@ -857,7 +857,7 @@ window.editEquipment = async (id) => {
     }
     // 이미지 조회/삭제 버튼 (image_file_url이 있을 때만)
     if (currentImageFile) {
-      currentImageFile.innerHTML = imageFileUrl ? renderDocButtons(imageFileUrl, 'image', equipment.id) : '';
+      currentImageFile.innerHTML = imageFileUrl ? renderDocButtons(getProxiedImageUrl(imageFileUrl), 'image', equipment.id) : '';
     }
 
     document.getElementById('equipmentModalLabel').textContent = '장비 수정';

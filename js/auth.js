@@ -1,6 +1,19 @@
 // API Base URL
 const API_BASE_URL = 'https://equipment-reservation-backend.vercel.app/api';
 
+// R2 URL을 백엔드 프록시 URL로 변환 (네트워크 보안 정책으로 R2 직접 접근 차단 우회)
+const getProxiedImageUrl = (url) => {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith('.r2.dev')) {
+      const path = parsed.pathname.startsWith('/') ? parsed.pathname.slice(1) : parsed.pathname;
+      return `${API_BASE_URL}/upload/proxy/${path}`;
+    }
+  } catch (e) {}
+  return url;
+};
+
 // Token management
 const setToken = (token) => {
   localStorage.setItem('token', token);

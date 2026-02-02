@@ -102,7 +102,7 @@ const renderEquipmentCard = (equipment) => {
   const statusClass = equipment.status === 'available' ? 'status-available' : 'status-maintenance';
   const statusText = equipment.status === 'available' ? '사용 가능' : '점검 중';
   const defaultImage = 'https://via.placeholder.com/400x200?text=' + encodeURIComponent(equipment.name);
-  const displayImage = equipment.image_file_url || equipment.image_url || defaultImage;
+  const displayImage = getProxiedImageUrl(equipment.image_file_url) || equipment.image_url || defaultImage;
 
   // Convert newlines to <br> for display
   const descriptionHtml = equipment.description
@@ -247,7 +247,7 @@ const showEquipmentDetails = async (equipmentId) => {
     modalBody.innerHTML = `
       <div class="row">
         <div class="col-md-7">
-          <img src="${equipment.image_file_url || equipment.image_url || defaultImage}" class="img-fluid mb-3 rounded" alt="${equipment.name}">
+          <img src="${getProxiedImageUrl(equipment.image_file_url) || equipment.image_url || defaultImage}" class="img-fluid mb-3 rounded" alt="${equipment.name}">
           <div class="mb-3">
             <h6>상태</h6>
             <span class="equipment-status ${statusClass}">${statusText}</span>
