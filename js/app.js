@@ -225,17 +225,17 @@ const showEquipmentDetails = async (equipmentId) => {
         ${hasDocuments ? `
           <div class="list-group list-group-flush">
             ${equipment.brochure_url ? `
-              <a href="${equipment.brochure_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+              <a href="${getProxiedImageUrl(equipment.brochure_url)}" target="_blank" class="list-group-item list-group-item-action py-2">
                 <i class="bi bi-download"></i> 장비 소개 자료
               </a>
             ` : ''}
             ${equipment.manual_url ? `
-              <a href="${equipment.manual_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+              <a href="${getProxiedImageUrl(equipment.manual_url)}" target="_blank" class="list-group-item list-group-item-action py-2">
                 <i class="bi bi-download"></i> 매뉴얼
               </a>
             ` : ''}
             ${equipment.quick_guide_url ? `
-              <a href="${equipment.quick_guide_url}" target="_blank" class="list-group-item list-group-item-action py-2">
+              <a href="${getProxiedImageUrl(equipment.quick_guide_url)}" target="_blank" class="list-group-item list-group-item-action py-2">
                 <i class="bi bi-download"></i> 간단 매뉴얼
               </a>
             ` : ''}

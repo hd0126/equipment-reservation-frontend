@@ -847,13 +847,13 @@ window.editEquipment = async (id) => {
     const currentImageFile = document.getElementById('currentImageFile');
 
     if (currentBrochure) {
-      currentBrochure.innerHTML = renderDocButtons(equipment.brochure_url, 'brochure', equipment.id);
+      currentBrochure.innerHTML = renderDocButtons(getProxiedImageUrl(equipment.brochure_url), 'brochure', equipment.id);
     }
     if (currentManual) {
-      currentManual.innerHTML = renderDocButtons(equipment.manual_url, 'manual', equipment.id);
+      currentManual.innerHTML = renderDocButtons(getProxiedImageUrl(equipment.manual_url), 'manual', equipment.id);
     }
     if (currentQuickGuide) {
-      currentQuickGuide.innerHTML = renderDocButtons(equipment.quick_guide_url, 'quick_guide', equipment.id);
+      currentQuickGuide.innerHTML = renderDocButtons(getProxiedImageUrl(equipment.quick_guide_url), 'quick_guide', equipment.id);
     }
     // 이미지 조회/삭제 버튼 (image_file_url이 있을 때만)
     if (currentImageFile) {
